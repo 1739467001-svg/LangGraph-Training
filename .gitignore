@@ -1,0 +1,25 @@
+# ===== 数据安全（项目铁律，见提示词第三节）=====
+# 真实原始数据与脱敏数据一律不入库
+病历资料/
+清洗后的数据/
+deid_tools/mapping_真实值勿提交.json
+
+# 医院导出的表格与文书，无论放在哪里都不入库
+*.xlsx
+*.xls
+*.zip
+*.xml
+*.m4a
+
+# 允许教学的虚构数据目录（如以后要用，在这里放行 fixtures/）
+# !fixtures/
+
+# ===== 常规 =====
+.DS_Store
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+outputs/
+data/
+.env
