@@ -37,6 +37,8 @@ class VisitState(TypedDict):
     orders: list       # 医嘱行（用药栏目的数据源）
     exams: list        # 检查结果行（检查所见栏目的数据源，已联表带项目名）
     labs: list         # 检验结果行（检验所见栏目的数据源，自带项目名和结果值）
+    vitals: list       # 生命体征行（第 19 课：计算器的数据源）
+    derived: list      # 第 19 课：代码算出的计算事实（住院天数/最高体温等）
     facts: Annotated[list, operator.add]   # 并行工位追加（第 5 课 reducer）
     verified: list
     rejected: list

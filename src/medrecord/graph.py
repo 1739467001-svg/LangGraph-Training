@@ -15,6 +15,7 @@ from medrecord.pipeline_nodes import (
 )
 from medrecord.privacy_gate import gate_node, route_after_gate, gate_blocked
 from medrecord.writer import write_node, qc_write_node, route_after_qc_write
+from medrecord.compute import compute_node
 
 
 def build_main_graph(checkpointer=None):
@@ -24,6 +25,8 @@ def build_main_graph(checkpointer=None):
     # ★ 第 16 课：出口闸门第一道——命中则直奔拦截终点，模型零调用
     g.add_node("privacy_gate", gate_node)
     g.add_node("gate_blocked", gate_blocked)
+    # ★ 第 19 课：计算器——算术交给代码（住院天数/最高体温/发热统计）
+    g.add_node("compute", compute_node)
     # ★ 第 9 课：子图当一个节点挂——「抽取科」整个被装进一个黑盒节点
     g.add_node("extraction", build_extraction_subgraph())
     # ★ 第 18 课：书记员科室——成文 + 质检（不合格带意见重写，最多 2 次）
@@ -37,8 +40,9 @@ def build_main_graph(checkpointer=None):
 
     g.add_edge(START, "load_orders")
     g.add_edge("load_orders", "privacy_gate")
-    g.add_conditional_edges("privacy_gate", route_after_gate)   # 放行→抽取 / 拦截→终点
+    g.add_conditional_edges("privacy_gate", route_after_gate)   # 放行→计算→抽取 / 拦截→终点
     g.add_edge("gate_blocked", END)
+    g.add_edge("compute", "extraction")
     g.add_edge("extraction", "write")
     g.add_edge("write", "qc_write")
     g.add_conditional_edges("qc_write", route_after_qc_write)   # 重写 / 拼草稿

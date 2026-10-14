@@ -24,7 +24,7 @@ def main():
     print("═══ 第一段：stream 观察每个节拍 ═══")
     final = None
     for update in app.stream(
-        {"folder": patient_id, "patient_id": patient_id, "orders": [], "exams": [], "labs": [], "facts": [],
+        {"folder": patient_id, "patient_id": patient_id, "orders": [], "exams": [], "labs": [], "vitals": [], "derived": [], "facts": [],
          "verified": [], "rejected": [], "qc": {}, "gate": {}, "written": [], "qc_write": {}, "write_feedback": [], "draft": "", "review": {}, "evaluation": ""},
         config, stream_mode="updates",
     ):

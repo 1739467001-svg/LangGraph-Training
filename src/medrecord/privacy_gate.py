@@ -91,6 +91,7 @@ def gate_node(state: dict) -> dict:
     text = "\n".join(o["text"] for o in state["orders"])
     text += "\n" + "\n".join(e["item_name"] + e["impression"] for e in state["exams"])
     text += "\n" + "\n".join(l["name"] + l["value"] for l in state.get("labs", []))
+    text += "\n" + "\n".join(v["name"] + (v["value"] or "") for v in state.get("vitals", []))
     result = scan(text)
     if result["passed"]:
         print("[出口闸门①] 放行：未发现疑似身份信息")
@@ -101,7 +102,7 @@ def gate_node(state: dict) -> dict:
 
 def route_after_gate(state: dict) -> str:
     """命中 → 去拦截终点（模型零调用）；干净 → 进抽取科"""
-    return "extraction" if state["gate"]["passed"] else "gate_blocked"
+    return "compute" if state["gate"]["passed"] else "gate_blocked"
 
 
 def gate_blocked(state: dict) -> dict:

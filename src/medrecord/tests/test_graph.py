@@ -78,7 +78,7 @@ def test_说谎模型_闸门拦截_草稿不收(monkeypatch):
 
     app = build_main_graph(checkpointer=InMemorySaver())
     cfg = {"configurable": {"thread_id": "test-liar"}}
-    init = {"folder": "测试患者乙", "patient_id": "测试患者乙", "orders": [], "exams": [], "labs": [], "facts": [],
+    init = {"folder": "测试患者乙", "patient_id": "测试患者乙", "orders": [], "exams": [], "labs": [], "vitals": [], "derived": [], "facts": [],
             "verified": [], "rejected": [], "qc": {}, "gate": {}, "written": [], "qc_write": {}, "write_feedback": [], "draft": "", "review": {}, "evaluation": ""}
     r = app.invoke(init, cfg)
     assert "__interrupt__" in r                       # 流程照样能走到审核站
@@ -96,7 +96,7 @@ def test_说谎模型_闸门拦截_草稿不收(monkeypatch):
 def test_整机_乙_停审核_批准走完():
     app = build_main_graph(checkpointer=InMemorySaver())
     cfg = {"configurable": {"thread_id": "test-smoke-乙"}}
-    init = {"folder": "测试患者乙", "patient_id": "测试患者乙", "orders": [], "exams": [], "labs": [], "facts": [],
+    init = {"folder": "测试患者乙", "patient_id": "测试患者乙", "orders": [], "exams": [], "labs": [], "vitals": [], "derived": [], "facts": [],
             "verified": [], "rejected": [], "qc": {}, "gate": {}, "written": [], "qc_write": {}, "write_feedback": [], "draft": "", "review": {}, "evaluation": ""}
     r = app.invoke(init, cfg)
     assert "__interrupt__" in r

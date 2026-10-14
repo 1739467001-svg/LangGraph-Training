@@ -31,7 +31,7 @@ def test_禁用姓名_命中():
 
 def test_路由_命中去拦截_干净进抽取():
     assert route_after_gate({"gate": {"passed": False}}) == "gate_blocked"
-    assert route_after_gate({"gate": {"passed": True}}) == "extraction"
+    assert route_after_gate({"gate": {"passed": True}}) == "compute"
 
 
 def test_闸门节点_第一道(monkeypatch):

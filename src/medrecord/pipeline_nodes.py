@@ -89,7 +89,26 @@ def load_orders(state) -> dict:
                 "value": str(val) if val not in (None, "") else "【待医生补充】",
                 "units": str(r[lidx["UNITS"]]) if r[lidx["UNITS"]] else "",
             })
-    return {"orders": orders, "exams": exams, "labs": labs,
+    # —— 第 19 课：生命体征（计算器的数据源）——
+    vitals = []
+    vit_path = os.path.join(DATA_DIR, state["folder"], "生命体征.xlsx")
+    if os.path.exists(vit_path):
+        vws = load_workbook(vit_path, read_only=True).active
+        vrows = vws.iter_rows(values_only=True)
+        vh = [str(h) if h else "" for h in next(vrows)]
+        vidx = {h: i for i, h in enumerate(vh)}
+        for row_no, r in enumerate(vrows, start=2):
+            name = r[vidx["VITAL_SIGNS"]]
+            if name is None:
+                continue
+            val = r[vidx["VITAL_SIGNS_CVALUES"]]
+            vitals.append({
+                "row": row_no, "name": str(name),
+                "value": str(val) if val not in (None, "") else None,
+                "units": str(r[vidx["UNITS"]]) if r[vidx["UNITS"]] else "",
+                "date": r[vidx["RECORDING_DATE"]],
+            })
+    return {"orders": orders, "exams": exams, "labs": labs, "vitals": vitals,
             "patient_id": patient_id, "folder": state["folder"]}
 
 
@@ -112,6 +131,10 @@ def build_draft_node(state) -> dict:
     qc_ok = state["qc_write"].get("passed")
     lines = [f"病历文书草稿：{state['patient_id']}"
              f"（书记员成文 {n} 句；成文质检 {'通过' if qc_ok else '未完全通过'}）"]
+    if state.get("derived"):
+        lines.append("【住院概况】（代码计算，模型未参与）")
+        for d in state["derived"]:
+            lines.append(f"· {d['label']}：{d['value']}（{d['basis']}；出处：{d['source']}）")
     for sec in ("用药记录", "检查所见", "检验所见"):
         lines.append(f"【{sec}】")
         if groups[sec]:
@@ -208,6 +231,7 @@ def evaluate(state) -> dict:
         f"检验所见：草稿 {len(lab_facts)} 条，自覆盖率 {lab_cov:.0%}"
         f"（{len(lab_rows_done)}/{lab_total} 行有结果的检验）",
         f"编造：{len(state['rejected'])} 条（核对剔除，三栏目合计）",
+        f"住院概况：{len(state.get('derived', []))} 条计算事实（代码生成，模型未参与）",
     ]
     for d in sorted(set(hits)):
         lines.append(f"  ✓ 用药命中：{d}")
@@ -251,9 +275,15 @@ def export_eval(state) -> dict:
                 f"    <审核 医生=\"{state['review']['reviewer']}\" 结论=\"{state['review']['decision']}\"/>\n"
                 f"  </用药记录>"
             )
+    derived_records = [
+        f"  <住院概况 计算项=\"{d['label']}\">{d['value']}<依据>{d['basis']}</依据>"
+        f"<出处>{d['source']}</出处></住院概况>"
+        for d in state.get("derived", [])
+    ]
     xml = ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
            f"<病历文书草稿 generated=\"{datetime.now().isoformat(timespec='seconds')}\">\n"
-           + "\n".join(drug_records + exam_records + lab_records) + "\n</病历文书草稿>\n")
+           + "\n".join(derived_records + drug_records + exam_records + lab_records)
+           + "\n</病历文书草稿>\n")
     os.makedirs(OUT_DIR, exist_ok=True)
     xml_path = os.path.join(OUT_DIR, f"lesson13_{state['patient_id']}_文书草稿.xml")
     with open(xml_path, "w", encoding="utf-8") as fp:

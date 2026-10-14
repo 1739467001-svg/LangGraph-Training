@@ -22,7 +22,7 @@ from medrecord.state import DATA_DIR, OUT_DIR, CHUNK_SIZE
 
 
 def _init(patient_id: str) -> dict:
-    return {"folder": patient_id, "patient_id": patient_id, "orders": [], "exams": [], "labs": [],
+    return {"folder": patient_id, "patient_id": patient_id, "orders": [], "exams": [], "labs": [], "vitals": [], "derived": [],
             "facts": [], "verified": [], "rejected": [], "qc": {}, "gate": {}, "written": [], "qc_write": {}, "write_feedback": [],
             "draft": "", "review": {}, "evaluation": ""}
 
