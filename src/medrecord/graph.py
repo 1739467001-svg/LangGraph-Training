@@ -14,6 +14,7 @@ from medrecord.pipeline_nodes import (
     finalize, archive, export_eval,
 )
 from medrecord.privacy_gate import gate_node, route_after_gate, gate_blocked
+from medrecord.writer import write_node, qc_write_node, route_after_qc_write
 
 
 def build_main_graph(checkpointer=None):
@@ -25,6 +26,9 @@ def build_main_graph(checkpointer=None):
     g.add_node("gate_blocked", gate_blocked)
     # ★ 第 9 课：子图当一个节点挂——「抽取科」整个被装进一个黑盒节点
     g.add_node("extraction", build_extraction_subgraph())
+    # ★ 第 18 课：书记员科室——成文 + 质检（不合格带意见重写，最多 2 次）
+    g.add_node("write", write_node)
+    g.add_node("qc_write", qc_write_node)
     g.add_node("build_draft", build_draft_node)
     g.add_node("doctor_review", doctor_review)
     g.add_node("finalize", finalize)
@@ -35,7 +39,9 @@ def build_main_graph(checkpointer=None):
     g.add_edge("load_orders", "privacy_gate")
     g.add_conditional_edges("privacy_gate", route_after_gate)   # 放行→抽取 / 拦截→终点
     g.add_edge("gate_blocked", END)
-    g.add_edge("extraction", "build_draft")
+    g.add_edge("extraction", "write")
+    g.add_edge("write", "qc_write")
+    g.add_conditional_edges("qc_write", route_after_qc_write)   # 重写 / 拼草稿
     g.add_edge("build_draft", "doctor_review")
     g.add_conditional_edges("doctor_review", route_after_review)
     g.add_edge("finalize", "export_eval")

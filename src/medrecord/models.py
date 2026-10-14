@@ -118,3 +118,82 @@ def parse_facts(ai_msg: AIMessage) -> FactList:
 
 
 extraction_chain = prompt | make_llm() | parse_facts
+
+
+# ================= 第 18 课：书记员（成文节点）=================
+# 与「资料员」的分工：资料员从原文抽事实，书记员把【核对过的事实】写成病历语言。
+# 关键约束：书记员只能引用事实编号，不许增加任何新内容——它编的东西
+# 在质检环节会被当场打回（引用了不存在的编号 = 编造的铁证）。
+
+
+class WrittenSentence(BaseModel):
+    text: str = Field(description="一句符合病历书写习惯的话")
+    sources: List[str] = Field(description="这句话用到的事实编号，如 ['F3','F7']")
+
+
+class SentenceList(BaseModel):
+    sentences: List[WrittenSentence]
+
+
+write_prompt = ChatPromptTemplate.from_messages([
+    ("system", """你是病历书写助手的「书记员」。把给定的、已经核对过的事实，写成符合病历书写习惯的句子。
+
+规则：
+1. 只能使用下面列出的事实，不能增加任何新内容。事实不够，就少写，不要补。
+2. 每句话都要在 sources 里带上事实编号（如 F3、F7）；一句话合并了几条事实，就带上几个编号。
+3. 语言简洁、客观、使用医学书面语。不下诊断，不做推测性判断（除非这句话本来就出自事实原文）。
+4. 不要自己写「待医生补充」占位——那是程序的活，不是你的。
+5. 如果收到质检意见（feedback），逐条改正后再输出。
+
+只输出 JSON，不要任何解释。"""),
+    ("human", "已核对的事实（JSON，每条带编号 id）：\n```json\n{facts_json}\n```\n\n质检意见（首次成稿时为「（无）」）：{feedback}"),
+])
+
+
+class BaselineWriter(BaseChatModel):
+    """规则基线写手：从提示词里解析事实，按栏目套句式成句，每句带编号。
+       真模型获批后由 make_writer() 换成 ChatOpenAI——接口一致，图不改。"""
+
+    @property
+    def _llm_type(self) -> str:
+        return "baseline-writer"
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        text = messages[-1].content
+        m = re.search(r"```json\n(.*?)\n```", text, re.DOTALL)
+        facts = json.loads(m.group(1)) if m else []
+        sentences = []
+        for f in facts:
+            fid = f.get("id", "?")
+            if f.get("section") == "检查所见":
+                body = f"{f['name']}：{f['impression']}。"
+            elif f.get("section") == "检验所见":
+                units = f" {f['units']}" if f.get("units") else ""
+                body = f"{f['name']} {f['value']}{units}。"
+            else:
+                body = f"{f['drug']} {f['dose']}，{f['route']}，频次{f['freq']}。"
+            sentences.append({"text": body, "sources": [fid]})
+        content = json.dumps({"sentences": sentences}, ensure_ascii=False)
+        return ChatResult(generations=[ChatGeneration(message=AIMessage(content=content))])
+
+
+def make_writer() -> BaseChatModel:
+    """与 make_llm 同一套批准闸门：无 key / 未批准 → 基线写手；批准 → 真模型"""
+    key = os.environ.get("DRCOPILOT_API_KEY")
+    if not key or os.environ.get("DRCOPILOT_DATA_APPROVED") != "1":
+        return BaselineWriter()
+    from langchain_openai import ChatOpenAI
+    return ChatOpenAI(model=os.environ.get("DRCOPILOT_MODEL", ""),
+                      api_key=key,
+                      base_url=os.environ.get("DRCOPILOT_LLM_BASE_URL") or None,
+                      temperature=0)
+
+
+def parse_sentences(ai_msg: AIMessage) -> SentenceList:
+    text = ai_msg.content.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```[a-zA-Z]*\s*|\s*```$", "", text).strip()
+    return SentenceList.model_validate_json(text)
+
+
+write_chain = write_prompt | make_writer() | parse_sentences

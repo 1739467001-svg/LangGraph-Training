@@ -25,7 +25,7 @@ def main():
     final = None
     for update in app.stream(
         {"folder": patient_id, "patient_id": patient_id, "orders": [], "exams": [], "labs": [], "facts": [],
-         "verified": [], "rejected": [], "qc": {}, "gate": {}, "draft": "", "review": {}, "evaluation": ""},
+         "verified": [], "rejected": [], "qc": {}, "gate": {}, "written": [], "qc_write": {}, "write_feedback": [], "draft": "", "review": {}, "evaluation": ""},
         config, stream_mode="updates",
     ):
         for node_name in update:

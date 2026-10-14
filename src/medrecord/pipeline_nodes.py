@@ -94,26 +94,34 @@ def load_orders(state) -> dict:
 
 
 def build_draft_node(state) -> dict:
-    drug_lines, exam_lines, lab_lines = [], [], []
-    for f in state["verified"]:
-        if f["section"] == "检查所见":
-            exam_lines.append(f"· {f['name']}｜印象：{f['impression']}"
-                              f"｜建议：{f['recommendation']}｜出处：{f['source']}")
-        elif f["section"] == "检验所见":
-            units = f" {f['units']}" if f.get("units") else ""
-            lab_lines.append(f"· {f['name']}：{f['value']}{units}｜出处：{f['source']}")
-        else:
-            drug_lines.append(f"{len(drug_lines) + 1}. {f['drug']} | {f['dose']} | {f['route']}"
-                              f" | 频次:{f['freq']} | 出处：{f['source']}")
+    """第 18 课起：草稿由「书记员成文的句子」拼装（不再是原始事实列表）。
+       没依据的栏目由代码统一加「待医生补充」——不交给模型决定（tech-spec 原则 4）"""
+    from medrecord.writer import assign_fact_ids
+    ids = assign_fact_ids(state["verified"])
+    groups = {"用药记录": [], "检查所见": [], "检验所见": []}
+    for s in state.get("written", []):
+        sec = "用药记录"
+        for src in s["sources"]:
+            fact = ids.get(src)
+            if fact:
+                sec = fact.get("section", "用药记录")
+                break
+        groups[sec].append(f"· {s['text']}（出处 {'、'.join(s['sources'])}）")
+
+    n = len(state.get("written", []))
+    qc_ok = state["qc_write"].get("passed")
     lines = [f"病历文书草稿：{state['patient_id']}"
-             f"（用药 {len(drug_lines)} 条 + 检查所见 {len(exam_lines)} 条 + "
-             f"检验所见 {len(lab_lines)} 条，均核对通过）"]
-    lines.append("【用药记录】")
-    lines.extend(drug_lines)
-    lines.append("【检查所见】")
-    lines.extend(exam_lines)
-    lines.append("【检验所见】")
-    lines.extend(lab_lines)
+             f"（书记员成文 {n} 句；成文质检 {'通过' if qc_ok else '未完全通过'}）"]
+    for sec in ("用药记录", "检查所见", "检验所见"):
+        lines.append(f"【{sec}】")
+        if groups[sec]:
+            lines.extend(groups[sec])
+        else:
+            lines.append("· 【待医生补充】（本栏目暂无核对通过的事实）")
+    if not qc_ok:
+        lines.append("⚠ 成文质检遗留问题（已带病进入审核，请医生留意）：")
+        for i in state["qc_write"].get("issues", []):
+            lines.append(f"  · {i}")
     if state["rejected"]:
         lines.append("剔除（未进入草稿）：")
         for f in state["rejected"]:

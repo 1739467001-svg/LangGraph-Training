@@ -40,7 +40,10 @@ class VisitState(TypedDict):
     facts: Annotated[list, operator.add]   # 并行工位追加（第 5 课 reducer）
     verified: list
     rejected: list
-    qc: dict
+    qc: dict           # 抽取阶段质检（第 2 课）
+    written: list      # 第 18 课：书记员成文的句子 [{"text","sources"}]
+    qc_write: dict     # 成文阶段质检：{"passed","issues","attempts","retry"}
+    write_feedback: list   # 质检意见（重写时注入提示词）
     gate: dict         # 第 16 课：出口闸门结果 {"passed": bool, "hits": [...]}
     draft: str
     review: dict
