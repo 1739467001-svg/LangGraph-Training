@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
-"""writer.py —— 「书记员科室」：成文 → 质检 →（不合格带意见重写，最多 2 次）
+"""writer.py —— 「书记员科室」：按栏目分批成文 → 质检 →（带意见重写，最多 2 次）
 
-对应 donge-hospital-ai tech-spec 的 write + qc 两站：
-  write：大模型只用【核对过的事实】写成病历语言，每句带事实编号
-  qc   ：代码逐句检查——每句必须有真实存在的编号；不合格把意见写回提示词重写
+第 18 课的书记员是一个人看全部事实写全部句子——真模型一上线会爆 token。
+第 20 课改成「按栏目分批」：用药/检查/检验各开一个成文工位并行写，
+写完汇合到质检站。分几批由数据里的栏目决定（和抽取科同一套 Send 打法）。
 
-这就是第 2 课「退回重写」的第二次实战，区别在于：
-  退回时不再只是重跑，而是把【质检意见】注入提示词——模型带着批注改稿。
+三个新概念：
+  1. write_plan  → 返回 "__RESET__"，让自定义归并规则先擦黑板（防重写累积重复）
+  2. Send 按栏目分发成文工位（每个工位只看自己栏目的事实）
+  3. 多个工位汇合到同一个 qc_write 节点——LangGraph 等全部到齐后只跑一次（join）
 """
 import json
+
+from langgraph.types import Send
 
 from medrecord.models import write_chain
 from medrecord.state import VisitState
@@ -22,18 +26,49 @@ def assign_fact_ids(verified: list) -> dict:
     return {f"F{i + 1}": f for i, f in enumerate(verified)}
 
 
-def write_node(state: VisitState) -> dict:
-    ids = assign_fact_ids(state["verified"])
-    facts_payload = [{"id": k, **v} for k, v in ids.items()]
+def group_by_section(verified: list) -> dict:
+    """按栏目分组：{"用药记录": [(F1, fact), ...], ...}——只保留非空栏目"""
+    groups = {}
+    for fid, fact in assign_fact_ids(verified).items():
+        groups.setdefault(fact.get("section", "用药记录"), []).append((fid, fact))
+    return {sec: items for sec, items in groups.items() if items}
+
+
+def write_plan_node(state: VisitState) -> dict:
+    """成文轮次开工：擦黑板（清掉上一轮的句子），本轮由 fan_out_write 分发"""
+    rnd = state["qc_write"].get("attempts", 0) + 1
+    tag = "初稿" if not state.get("write_feedback") else f"重写第{rnd - 1}次（带质检意见）"
+    print(f"[书记员] {tag}：按栏目分发成文工位")
+    return {"written": "__RESET__"}
+
+
+def fan_out_write(state: VisitState):
+    """条件边：每个非空栏目开一个成文工位；一个栏目都没有 → 直接去质检"""
+    groups = group_by_section(state["verified"])
+    if not groups:
+        return "qc_write"
     feedback = "；".join(state.get("write_feedback", [])) or "（无）"
+    sends = []
+    for sec, items in groups.items():
+        sends.append(Send("write_section", {
+            "section": sec,
+            "facts": [{"id": fid, **fact} for fid, fact in items],
+            "feedback": feedback,
+        }))
+    print(f"[书记员] 分发 {len(sends)} 个成文工位：" +
+          "、".join(f"{s.arg['section']}({len(s.arg['facts'])}条)" for s in sends))
+    return sends
+
+
+def write_section_node(state: dict) -> dict:
+    """成文工位：只处理自己栏目的事实（token 预算 = 栏目内事实量）"""
+    sec, facts, feedback = state["section"], state["facts"], state.get("feedback", "（无）")
     result = write_chain.invoke({
-        "facts_json": json.dumps(facts_payload, ensure_ascii=False, default=str),
+        "facts_json": json.dumps(facts, ensure_ascii=False, default=str),
         "feedback": feedback,
     })
     written = [s.model_dump() for s in result.sentences]
-    rnd = state["qc_write"].get("attempts", 0) + 1
-    tag = "初稿" if feedback == "（无）" else f"重写第{rnd - 1}次"
-    print(f"[书记员] {tag}：成文 {len(written)} 句")
+    print(f"[书记员·{sec}] 成文 {len(written)} 句")
     return {"written": written}
 
 
@@ -65,4 +100,4 @@ def qc_write_node(state: VisitState) -> dict:
 
 def route_after_qc_write(state: VisitState) -> str:
     """条件边：质检不合格且没到上限 → 回书记员重写；否则 → 拼草稿"""
-    return "write" if state["qc_write"]["retry"] else "build_draft"
+    return "write_plan" if state["qc_write"]["retry"] else "build_draft"

@@ -31,6 +31,15 @@ SECTION_EXAM = "检查所见"    # 纯代码工位（医生已写好印象，逐
 SECTION_LAB = "检验所见"     # 纯代码工位（第 17 课：结果表自带项目名和结果值）
 
 
+def written_reducer(left: list, right) -> list:
+    """written 的归并规则（第 20 课）：
+       收到 "__RESET__" 标记 → 清空（重写轮次开工前先擦黑板）；
+       其余情况 → 追加（多个栏目工位并行交货）。"""
+    if right == "__RESET__":
+        return []
+    return (left or []) + (right or [])
+
+
 class VisitState(TypedDict):
     folder: str        # 数据文件夹名（测试患者甲）——找 zip 用
     patient_id: str    # 住院号（FAKE0001）——表里的正式身份
@@ -43,7 +52,7 @@ class VisitState(TypedDict):
     verified: list
     rejected: list
     qc: dict           # 抽取阶段质检（第 2 课）
-    written: list      # 第 18 课：书记员成文的句子 [{"text","sources"}]
+    written: Annotated[list, written_reducer]   # 第 20 课：栏目工位并行成文，需归并规则
     qc_write: dict     # 成文阶段质检：{"passed","issues","attempts","retry"}
     write_feedback: list   # 质检意见（重写时注入提示词）
     gate: dict         # 第 16 课：出口闸门结果 {"passed": bool, "hits": [...]}
