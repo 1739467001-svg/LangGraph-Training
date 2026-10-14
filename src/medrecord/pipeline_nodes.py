@@ -115,7 +115,7 @@ def load_orders(state) -> dict:
 def build_draft_node(state) -> dict:
     """第 18 课起：草稿由「书记员成文的句子」拼装（不再是原始事实列表）。
        没依据的栏目由代码统一加「待医生补充」——不交给模型决定（tech-spec 原则 4）"""
-    from medrecord.writer import assign_fact_ids
+    from medrecord.writer import assign_fact_ids, sources_to_text
     ids = assign_fact_ids(state["verified"])
     groups = {"用药记录": [], "检查所见": [], "检验所见": []}
     for s in state.get("written", []):
@@ -125,7 +125,7 @@ def build_draft_node(state) -> dict:
             if fact:
                 sec = fact.get("section", "用药记录")
                 break
-        groups[sec].append(f"· {s['text']}（出处 {'、'.join(s['sources'])}）")
+        groups[sec].append(f"· {s['text']}（出处：{sources_to_text(s['sources'], ids)}）")
 
     n = len(state.get("written", []))
     qc_ok = state["qc_write"].get("passed")
@@ -238,6 +238,64 @@ def evaluate(state) -> dict:
     for s in sorted(std_unique - matched_std):
         lines.append(f"  ✗ 标准答案未覆盖：{s}")
     return {"evaluation": "\n".join(lines)}
+
+
+def render_node(state) -> dict:
+    """排版输出（第 21 课，tech-spec 最后一站）：把成文句排成医生能打印的
+       Markdown 稿——栏目分节、真实出处（不是内部编号 F3）、质控记录随附。
+       医院真实排版模板是 DCSoft 格式，对接时按模板换渲染层，内容不变"""
+    from medrecord.writer import assign_fact_ids, sources_to_text
+    ids = assign_fact_ids(state["verified"])
+    approved = "批准" in state["review"]["decision"]
+    status = "已过审" if approved else "未过审（草稿归档）"
+
+    lines = [f"# 病历文书草稿 · {state['patient_id']}", "",
+             f"> 状态：**{status}** ｜ 审核：{state['review']['reviewer']} · {state['review']['decision']}"]
+    if approved:
+        lines.append("> 已通过医生审核；正式使用前请按医院流程归档。")
+    else:
+        lines.append("> ⚠ 本稿未经医生确认，**不得作为正式病历内容使用**。")
+    lines.append("")
+
+    if state.get("derived"):
+        lines += ["## 住院概况（代码计算）", "", "| 项目 | 值 | 依据 | 出处 |", "|---|---|---|---|"]
+        for d in state["derived"]:
+            lines.append(f"| {d['label']} | {d['value']} | {d['basis']} | {d['source']} |")
+        lines.append("")
+
+    groups = {"用药记录": [], "检查所见": [], "检验所见": []}
+    for s in state.get("written", []):
+        sec = "用药记录"
+        for src in s["sources"]:
+            fact = ids.get(src)
+            if fact:
+                sec = fact.get("section", "用药记录")
+                break
+        groups[sec].append(f"- {s['text']}（出处：{sources_to_text(s['sources'], ids)}）")
+    for sec in groups:
+        lines.append(f"## {sec}")
+        lines.extend(groups[sec] or ["- 【待医生补充】（本栏目暂无核对通过的事实）"])
+        lines.append("")
+
+    lines.append("## 质控记录")
+    qc = state["qc_write"]
+    lines.append(f"- 成文质检：重写 {qc.get('attempts', 0)} 次，"
+                 f"结论 {'通过' if qc.get('passed') else '未完全通过（遗留问题如下）'}")
+    for issue in qc.get("issues", []):
+        lines.append(f"  - {issue}")
+    if state["rejected"]:
+        lines.append(f"- 核对剔除 {len(state['rejected'])} 条（未进入草稿）：")
+        for f in state["rejected"]:
+            lines.append(f"  - [{f['section']}] {f.get('drug') or f.get('name')} —— {f['reason']}")
+    lines += ["", "---", "*本文件由 medrecord 流水线生成；过程记录不含患者身份信息。*"]
+
+    md = "\n".join(lines) + "\n"
+    os.makedirs(OUT_DIR, exist_ok=True)
+    out = os.path.join(OUT_DIR, f"{state['patient_id']}_病历草稿.md")
+    with open(out, "w", encoding="utf-8") as fp:
+        fp.write(md)
+    print(f"[排版] Markdown 打印稿 → {out}")
+    return {"rendered": md}
 
 
 def export_eval(state) -> dict:

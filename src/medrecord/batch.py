@@ -23,7 +23,7 @@ from medrecord.state import DATA_DIR, OUT_DIR, CHUNK_SIZE
 
 def _init(patient_id: str) -> dict:
     return {"folder": patient_id, "patient_id": patient_id, "orders": [], "exams": [], "labs": [], "vitals": [], "derived": [],
-            "facts": [], "verified": [], "rejected": [], "qc": {}, "gate": {}, "written": [], "qc_write": {}, "write_feedback": [],
+            "facts": [], "verified": [], "rejected": [], "qc": {}, "gate": {}, "written": [], "qc_write": {}, "write_feedback": [], "rendered": "",
             "draft": "", "review": {}, "evaluation": ""}
 
 
@@ -65,6 +65,8 @@ def run_one(app, patient_id: str) -> dict:
         "exam_cov": (len(exam_done) / exam_total) if exam_total else 0.0,
         "lab": len(lab),
         "lab_cov": (len(lab_done) / lab_total) if lab_total else 0.0,
+        "written_n": len(final.get("written", [])),
+        "derived_n": len(final.get("derived", [])),
         "missed": missed,
     }
 
@@ -96,6 +98,9 @@ def build_report(rows: list) -> str:
         for name, n in sorted(missed_count.items(), key=lambda x: -x[1]):
             lines.append(f"  - {name}：{n}/{len(rows)} 位患者未覆盖")
     lines.append(f"- 编造合计 {fab_total} 条——全部由核对闸门拦截，无一进入草稿")
+    written_total = sum(r.get("written_n", 0) for r in rows)
+    derived_total = sum(r.get("derived_n", 0) for r in rows)
+    lines.append("- 成文合计 " + str(written_total) + " 句（书记员按栏目分批并行），计算事实 " + str(derived_total) + " 条（代码生成）")
     lines.append("- 结论句式提醒：覆盖率要和「未覆盖原因」一起汇报，数字是引子，解读才是交付")
     return "\n".join(lines) + "\n"
 

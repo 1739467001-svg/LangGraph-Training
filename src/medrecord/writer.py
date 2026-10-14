@@ -34,6 +34,15 @@ def group_by_section(verified: list) -> dict:
     return {sec: items for sec, items in groups.items() if items}
 
 
+def sources_to_text(sources: list, ids: dict) -> str:
+    """把内部事实编号（F3）翻译成医生看的真实出处（医嘱.xlsx 第20行 医嘱号10）"""
+    parts = []
+    for s in sources:
+        fact = ids.get(s)
+        parts.append(fact["source"] if fact else s)
+    return "；".join(parts)
+
+
 def write_plan_node(state: VisitState) -> dict:
     """成文轮次开工：擦黑板（清掉上一轮的句子），本轮由 fan_out_write 分发"""
     rnd = state["qc_write"].get("attempts", 0) + 1

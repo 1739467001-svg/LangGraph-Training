@@ -56,6 +56,7 @@ class VisitState(TypedDict):
     qc_write: dict     # 成文阶段质检：{"passed","issues","attempts","retry"}
     write_feedback: list   # 质检意见（重写时注入提示词）
     gate: dict         # 第 16 课：出口闸门结果 {"passed": bool, "hits": [...]}
+    rendered: str      # 第 21 课：排版输出的 Markdown 打印稿
     draft: str
     review: dict
     evaluation: str

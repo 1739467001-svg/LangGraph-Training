@@ -4,6 +4,38 @@
 
 ---
 
+## 第 21 课：排版输出（render）——tech-spec 最后一站（2026-10-04）
+
+### 概念要点
+
+1. **render = 打印稿**：把成文句排成医生能打印的 Markdown——栏目分节、
+   住院概况表格、质控记录随附、状态横幅（已过审 / 未过审警示语）
+2. **内部编号不外露**：草稿内部用 F1/F2 追踪事实，打印稿用
+   `sources_to_text()` 翻译成**真实出处**（医嘱.xlsx 第20行 医嘱号10）——
+   给医生看的必须是能回查的东西
+3. **状态即内容**：过审稿写「已通过医生审核」；驳回稿写「不得作为正式
+   病历内容使用」——排版层也执行防编造纪律
+4. 图：finalize/archive → **render** → export_eval → END
+5. 批量报告新增成文统计（3267 句 / 计算事实 28 条）——验收报告完整了
+
+### 九站点全部落地
+
+normalize ✓ privacy_gate ✓ compute ✓ extract ✓ verify ✓ write ✓ qc ✓ review ✓ **render ✓**
+（render 用 Markdown 简版；医院 DCSoft 排版模板到位后只换渲染层，内容不变）
+
+### 运行结果（甲患者）
+
+- `outputs/FAKE0001_病历草稿.md`：状态横幅 + 住院概况表 + 三栏目 + 质控记录
+- 批量：5 患者成文合计 3267 句，计算事实 28 条，编造 0
+- **61 项测试全绿**（新增排版 5 项：真实出处/过审/驳回警示/质控记录/空栏目占位）
+
+### 关键代码位置
+
+- `src/medrecord/pipeline_nodes.py`：render_node / sources_to_text 接入草稿
+- `src/medrecord/tests/test_render.py`
+
+---
+
 ## 第 20 课：分批成文——token 工程与自定义归并规则（2026-10-04）
 
 ### 概念要点

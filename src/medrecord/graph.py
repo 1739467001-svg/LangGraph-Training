@@ -11,7 +11,7 @@ from medrecord.state import VisitState
 from medrecord.extraction import build_extraction_subgraph
 from medrecord.pipeline_nodes import (
     load_orders, build_draft_node, doctor_review, route_after_review,
-    finalize, archive, export_eval,
+    finalize, archive, export_eval, render_node,
 )
 from medrecord.privacy_gate import gate_node, route_after_gate, gate_blocked
 from medrecord.writer import (write_plan_node, write_section_node, fan_out_write,
@@ -38,6 +38,8 @@ def build_main_graph(checkpointer=None):
     g.add_node("doctor_review", doctor_review)
     g.add_node("finalize", finalize)
     g.add_node("archive", archive)
+    # ★ 第 21 课：排版输出（tech-spec 最后一站）
+    g.add_node("render", render_node)
     g.add_node("export_eval", export_eval)
 
     g.add_edge(START, "load_orders")
@@ -51,8 +53,9 @@ def build_main_graph(checkpointer=None):
     g.add_conditional_edges("qc_write", route_after_qc_write)   # 重写 / 拼草稿
     g.add_edge("build_draft", "doctor_review")
     g.add_conditional_edges("doctor_review", route_after_review)
-    g.add_edge("finalize", "export_eval")
-    g.add_edge("archive", "export_eval")
+    g.add_edge("finalize", "render")
+    g.add_edge("archive", "render")
+    g.add_edge("render", "export_eval")
     g.add_edge("export_eval", END)
 
     return g.compile(checkpointer=checkpointer or InMemorySaver())
