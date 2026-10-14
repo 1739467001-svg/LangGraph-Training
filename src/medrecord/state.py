@@ -28,6 +28,7 @@ PASS_RATE_FLOOR = 0.5
 # 第 13 课：栏目即配置——每个栏目一种数据源、一种工位
 SECTION_DRUG = "用药记录"    # 大模型工位（从非结构化文本抽事实）
 SECTION_EXAM = "检查所见"    # 纯代码工位（医生已写好印象，逐字摘录即可）
+SECTION_LAB = "检验所见"     # 纯代码工位（第 17 课：结果表自带项目名和结果值）
 
 
 class VisitState(TypedDict):
@@ -35,6 +36,7 @@ class VisitState(TypedDict):
     patient_id: str    # 住院号（FAKE0001）——表里的正式身份
     orders: list       # 医嘱行（用药栏目的数据源）
     exams: list        # 检查结果行（检查所见栏目的数据源，已联表带项目名）
+    labs: list         # 检验结果行（检验所见栏目的数据源，自带项目名和结果值）
     facts: Annotated[list, operator.add]   # 并行工位追加（第 5 课 reducer）
     verified: list
     rejected: list

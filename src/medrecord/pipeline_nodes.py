@@ -70,24 +70,50 @@ def load_orders(state) -> dict:
                 "impression": str(imp) if imp else "【待医生补充】",
                 "recommendation": str(rec) if rec else "【待医生补充】",
             })
-    return {"orders": orders, "exams": exams, "patient_id": patient_id, "folder": state["folder"]}
+    # —— 检验所见的数据源：检验结果表（第 17 课，自带项目名和结果值，无需联表）——
+    labs = []
+    labs_path = os.path.join(DATA_DIR, state["folder"], "检验结果.xlsx")
+    if os.path.exists(labs_path):
+        lab_ws = load_workbook(labs_path, read_only=True).active
+        lab_rows = lab_ws.iter_rows(values_only=True)
+        lh = [str(h) if h else "" for h in next(lab_rows)]
+        lidx = {h: i for i, h in enumerate(lh)}
+        for row_no, r in enumerate(lab_rows, start=2):
+            val = r[lidx["RESULT"]]
+            name = r[lidx["REPORT_ITEM_NAME"]]
+            if r[lidx["TEST_NO"]] is None:
+                continue
+            labs.append({
+                "row": row_no, "test_no": str(r[lidx["TEST_NO"]]),
+                "name": str(name) if name else "未知项目",
+                "value": str(val) if val not in (None, "") else "【待医生补充】",
+                "units": str(r[lidx["UNITS"]]) if r[lidx["UNITS"]] else "",
+            })
+    return {"orders": orders, "exams": exams, "labs": labs,
+            "patient_id": patient_id, "folder": state["folder"]}
 
 
 def build_draft_node(state) -> dict:
-    drug_lines, exam_lines = [], []
+    drug_lines, exam_lines, lab_lines = [], [], []
     for f in state["verified"]:
         if f["section"] == "检查所见":
             exam_lines.append(f"· {f['name']}｜印象：{f['impression']}"
                               f"｜建议：{f['recommendation']}｜出处：{f['source']}")
+        elif f["section"] == "检验所见":
+            units = f" {f['units']}" if f.get("units") else ""
+            lab_lines.append(f"· {f['name']}：{f['value']}{units}｜出处：{f['source']}")
         else:
             drug_lines.append(f"{len(drug_lines) + 1}. {f['drug']} | {f['dose']} | {f['route']}"
                               f" | 频次:{f['freq']} | 出处：{f['source']}")
     lines = [f"病历文书草稿：{state['patient_id']}"
-             f"（用药 {len(drug_lines)} 条 + 检查所见 {len(exam_lines)} 条，均核对通过）"]
+             f"（用药 {len(drug_lines)} 条 + 检查所见 {len(exam_lines)} 条 + "
+             f"检验所见 {len(lab_lines)} 条，均核对通过）"]
     lines.append("【用药记录】")
     lines.extend(drug_lines)
     lines.append("【检查所见】")
     lines.extend(exam_lines)
+    lines.append("【检验所见】")
+    lines.extend(lab_lines)
     if state["rejected"]:
         lines.append("剔除（未进入草稿）：")
         for f in state["rejected"]:
@@ -152,11 +178,16 @@ def evaluate(state) -> dict:
     extra = [d for d in draft if d not in hits]
     coverage = (len(matched_std) / len(std_unique)) if std_unique else 0.0
 
-    # 检查所见的自覆盖率：有印象的检查行里，多少被摘录进草稿（确定性工位应≈100%）
+    # 检查所见/检验所见（第 17 课）的自覆盖率：有结论的行里，多少被摘录进草稿
     exam_total = sum(1 for e in state["exams"] if e["impression"] != "【待医生补充】")
     exam_rows_done = {re.search(r"第(\d+)行", f["source"]).group(1)
                       for f in exam_facts if re.search(r"第(\d+)行", f["source"])}
     exam_cov = (len(exam_rows_done) / exam_total) if exam_total else 0.0
+    lab_facts = [f for f in state["verified"] if f["section"] == "检验所见"]
+    lab_total = sum(1 for l in state["labs"] if l["value"] != "【待医生补充】")
+    lab_rows_done = {re.search(r"第(\d+)行", f["source"]).group(1)
+                     for f in lab_facts if re.search(r"第(\d+)行", f["source"])}
+    lab_cov = (len(lab_rows_done) / lab_total) if lab_total else 0.0
 
     lines = [
         "═══ 评估报告（只含统计，不含病历内容）═══",
@@ -165,8 +196,10 @@ def evaluate(state) -> dict:
         f"  多报：{len(extra)} 条（草稿有、标准答案没有——交给医生判断，"
         f"常见原因是普通溶媒/辅助用药不单独写用药记录）",
         f"检查所见：草稿 {len(exam_facts)} 条，自覆盖率 {exam_cov:.0%}"
-        f"（{exam_rows_done and len(exam_rows_done) or 0}/{exam_total} 行有印象的检查）",
-        f"编造：{len(state['rejected'])} 条（核对剔除，两栏目合计）",
+        f"（{len(exam_rows_done)}/{exam_total} 行有印象的检查）",
+        f"检验所见：草稿 {len(lab_facts)} 条，自覆盖率 {lab_cov:.0%}"
+        f"（{len(lab_rows_done)}/{lab_total} 行有结果的检验）",
+        f"编造：{len(state['rejected'])} 条（核对剔除，三栏目合计）",
     ]
     for d in sorted(set(hits)):
         lines.append(f"  ✓ 用药命中：{d}")
@@ -177,7 +210,7 @@ def evaluate(state) -> dict:
 
 def export_eval(state) -> dict:
     status = "已过审" if "批准" in state["review"]["decision"] else "未过审"
-    drug_records, exam_records = [], []
+    drug_records, exam_records, lab_records = [], [], []
     for f in state["verified"]:
         if f["section"] == "检查所见":
             exam_records.append(
@@ -188,6 +221,16 @@ def export_eval(state) -> dict:
                 f"    <出处>{f['source']}</出处>\n"
                 f"    <审核 医生=\"{state['review']['reviewer']}\" 结论=\"{state['review']['decision']}\"/>\n"
                 f"  </检查所见>"
+            )
+        elif f["section"] == "检验所见":
+            lab_records.append(
+                f"  <检验所见 patient=\"{state['patient_id']}\" status=\"{status}\">\n"
+                f"    <项目>{f['name']}</项目>\n"
+                f"    <结果>{f['value']}</结果>\n"
+                f"    <单位>{f.get('units', '')}</单位>\n"
+                f"    <出处>{f['source']}</出处>\n"
+                f"    <审核 医生=\"{state['review']['reviewer']}\" 结论=\"{state['review']['decision']}\"/>\n"
+                f"  </检验所见>"
             )
         else:
             drug_records.append(
@@ -202,7 +245,7 @@ def export_eval(state) -> dict:
             )
     xml = ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
            f"<病历文书草稿 generated=\"{datetime.now().isoformat(timespec='seconds')}\">\n"
-           + "\n".join(drug_records + exam_records) + "\n</病历文书草稿>\n")
+           + "\n".join(drug_records + exam_records + lab_records) + "\n</病历文书草稿>\n")
     os.makedirs(OUT_DIR, exist_ok=True)
     xml_path = os.path.join(OUT_DIR, f"lesson13_{state['patient_id']}_文书草稿.xml")
     with open(xml_path, "w", encoding="utf-8") as fp:

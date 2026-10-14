@@ -37,7 +37,7 @@ def test_路由_命中去拦截_干净进抽取():
 def test_闸门节点_第一道(monkeypatch):
     monkeypatch.setattr("medrecord.privacy_gate._gate",
                         {"banned_names": set(), "loaded": True})
-    state = {"orders": [{"text": "普通医嘱文本"}], "exams": [{"item_name": "心电图", "impression": "窦性心律不齐"}]}
+    state = {"orders": [{"text": "普通医嘱文本"}], "labs": [], "exams": [{"item_name": "心电图", "impression": "窦性心律不齐"}]}
     out = gate_node(state)
     assert out["gate"]["passed"]
 

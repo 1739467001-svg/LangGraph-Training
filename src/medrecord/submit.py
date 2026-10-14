@@ -26,7 +26,7 @@ def main():
 
     final = None
     for update in app.stream(
-        {"folder": patient_id, "patient_id": patient_id, "orders": [], "exams": [], "facts": [],
+        {"folder": patient_id, "patient_id": patient_id, "orders": [], "exams": [], "labs": [], "facts": [],
          "verified": [], "rejected": [], "qc": {}, "gate": {}, "draft": "", "review": {}, "evaluation": ""},
         cfg, stream_mode="updates",
     ):

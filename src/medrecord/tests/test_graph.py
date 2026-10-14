@@ -29,29 +29,29 @@ BAD_DRUG_FACT = {"drug": "阿司匹林肠溶片", "dose": "100 mg", "route": "�
 
 
 def test_真实事实_放行():
-    out = verify_all({"orders": ORDERS, "exams": [], "facts": [GOOD_FACT], "qc": {}})
+    out = verify_all({"orders": ORDERS, "exams": [], "labs": [], "facts": [GOOD_FACT], "qc": {}})
     assert len(out["verified"]) == 1
     assert out["qc"]["retry"] is False
 
 
 def test_出处不存在_拦截():
-    out = verify_all({"orders": ORDERS, "exams": [], "facts": [BAD_SOURCE_FACT], "qc": {}})
+    out = verify_all({"orders": ORDERS, "exams": [], "labs": [], "facts": [BAD_SOURCE_FACT], "qc": {}})
     assert out["verified"] == []
     assert "出处不存在" in out["rejected"][0]["reason"]
 
 
 def test_药名与出处不符_拦截():
-    out = verify_all({"orders": ORDERS, "exams": [], "facts": [BAD_DRUG_FACT], "qc": {}})
+    out = verify_all({"orders": ORDERS, "exams": [], "labs": [], "facts": [BAD_DRUG_FACT], "qc": {}})
     assert "药名与出处不符" in out["rejected"][0]["reason"]
 
 
 def test_重复事实_去重():
-    out = verify_all({"orders": ORDERS, "exams": [], "facts": [GOOD_FACT, dict(GOOD_FACT)], "qc": {}})
+    out = verify_all({"orders": ORDERS, "exams": [], "labs": [], "facts": [GOOD_FACT, dict(GOOD_FACT)], "qc": {}})
     assert len(out["verified"]) == 1
 
 
 def test_全部被剔除时_触发重抽():
-    out = verify_all({"orders": ORDERS, "exams": [], "facts": [BAD_SOURCE_FACT], "qc": {}})
+    out = verify_all({"orders": ORDERS, "exams": [], "labs": [], "facts": [BAD_SOURCE_FACT], "qc": {}})
     assert out["qc"]["retry"] is True          # 通过率 0% → 退回重抽
     assert out["qc"]["attempts"] == 1
 
@@ -78,7 +78,7 @@ def test_说谎模型_闸门拦截_草稿不收(monkeypatch):
 
     app = build_main_graph(checkpointer=InMemorySaver())
     cfg = {"configurable": {"thread_id": "test-liar"}}
-    init = {"folder": "测试患者乙", "patient_id": "测试患者乙", "orders": [], "exams": [], "facts": [],
+    init = {"folder": "测试患者乙", "patient_id": "测试患者乙", "orders": [], "exams": [], "labs": [], "facts": [],
             "verified": [], "rejected": [], "qc": {}, "gate": {}, "draft": "", "review": {}, "evaluation": ""}
     r = app.invoke(init, cfg)
     assert "__interrupt__" in r                       # 流程照样能走到审核站
@@ -96,7 +96,7 @@ def test_说谎模型_闸门拦截_草稿不收(monkeypatch):
 def test_整机_乙_停审核_批准走完():
     app = build_main_graph(checkpointer=InMemorySaver())
     cfg = {"configurable": {"thread_id": "test-smoke-乙"}}
-    init = {"folder": "测试患者乙", "patient_id": "测试患者乙", "orders": [], "exams": [], "facts": [],
+    init = {"folder": "测试患者乙", "patient_id": "测试患者乙", "orders": [], "exams": [], "labs": [], "facts": [],
             "verified": [], "rejected": [], "qc": {}, "gate": {}, "draft": "", "review": {}, "evaluation": ""}
     r = app.invoke(init, cfg)
     assert "__interrupt__" in r
@@ -123,22 +123,22 @@ EXAM_WRONG = {"section": "检查所见", "name": "胸部CT", "impression": "阑�
 
 
 def test_检查所见_真实摘录_放行():
-    out = verify_all({"orders": ORDERS, "exams": EXAMS, "facts": [EXAM_GOOD], "qc": {}})
+    out = verify_all({"orders": ORDERS, "exams": EXAMS, "labs": [], "facts": [EXAM_GOOD], "qc": {}})
     assert len(out["verified"]) == 1
     assert out["verified"][0]["section"] == "检查所见"
 
 
 def test_检查所见_出处不存在_拦截():
-    out = verify_all({"orders": ORDERS, "exams": EXAMS, "facts": [EXAM_BAD], "qc": {}})
+    out = verify_all({"orders": ORDERS, "exams": EXAMS, "labs": [], "facts": [EXAM_BAD], "qc": {}})
     assert "出处不存在" in out["rejected"][0]["reason"]
 
 
 def test_检查所见_项目名与出处不符_拦截():
-    out = verify_all({"orders": ORDERS, "exams": EXAMS, "facts": [EXAM_WRONG], "qc": {}})
+    out = verify_all({"orders": ORDERS, "exams": EXAMS, "labs": [], "facts": [EXAM_WRONG], "qc": {}})
     assert "项目名与出处不符" in out["rejected"][0]["reason"]
 
 
 def test_检查所见_印象被篡改_拦截():
     tampered = {**EXAM_GOOD, "impression": "正常"}
-    out = verify_all({"orders": ORDERS, "exams": EXAMS, "facts": [tampered], "qc": {}})
+    out = verify_all({"orders": ORDERS, "exams": EXAMS, "labs": [], "facts": [tampered], "qc": {}})
     assert "印象与原文不符" in out["rejected"][0]["reason"]

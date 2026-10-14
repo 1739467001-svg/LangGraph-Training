@@ -13,7 +13,7 @@ from langgraph.types import Send
 
 from medrecord.models import extraction_chain
 from medrecord.state import (VisitState, CHUNK_SIZE, MAX_RETRY, PASS_RATE_FLOOR,
-                             SECTION_DRUG, SECTION_EXAM)
+                             SECTION_DRUG, SECTION_EXAM, SECTION_LAB)
 
 
 def dispatch(state: VisitState):
@@ -28,8 +28,13 @@ def dispatch(state: VisitState):
     exam_chunks = [exams[i:i + CHUNK_SIZE] for i in range(0, len(exams), CHUNK_SIZE)]
     for i, ch in enumerate(exam_chunks):
         sends.append(Send("extract_exam_chunk", {"chunk_no": f"检{i}", "exams": ch}))
+    labs = state["labs"]
+    lab_chunks = [labs[i:i + CHUNK_SIZE] for i in range(0, len(labs), CHUNK_SIZE)]
+    for i, ch in enumerate(lab_chunks):
+        sends.append(Send("extract_lab_chunk", {"chunk_no": f"验{i}", "labs": ch}))
     print(f"[调度] 用药 {len(orders)} 条 → {len(drug_chunks)} 个模型工位；"
-          f"检查所见 {len(exams)} 条 → {len(exam_chunks)} 个代码工位")
+          f"检查所见 {len(exams)} 条 → {len(exam_chunks)} 个代码工位；"
+          f"检验所见 {len(labs)} 条 → {len(lab_chunks)} 个代码工位")
     return sends
 
 
@@ -65,6 +70,25 @@ def extract_exam_chunk(state: dict) -> dict:
             "impression": e["impression"],
             "recommendation": e["recommendation"],
             "source": f"检查结果.xlsx 第{e['row']}行 检查号{e['exam_no']}",
+        })
+    print(f"[代码工位{no}] {len(chunk)} 条 → 摘录 {len(facts)} 条")
+    return {"facts": facts}
+
+
+def extract_lab_chunk(state: dict) -> dict:
+    """检验所见工位（第 17 课）：同样不用大模型——检验结果表自带项目名和结果值，
+       摘录 = 逐字复制带出处。结果值错一位都是人命关天，代码复制最安全"""
+    chunk, no = state["labs"], state.get("chunk_no", "?")
+    facts = []
+    for lab in chunk:
+        if lab["value"] == "【待医生补充】":
+            continue
+        facts.append({
+            "section": SECTION_LAB,
+            "name": lab["name"],
+            "value": lab["value"],
+            "units": lab["units"],
+            "source": f"检验结果.xlsx 第{lab['row']}行 检验号{lab['test_no']}",
         })
     print(f"[代码工位{no}] {len(chunk)} 条 → 摘录 {len(facts)} 条")
     return {"facts": facts}
@@ -109,10 +133,25 @@ def _verify_exam(f, exams_by_row, rejected, verified):
         verified.append(f)
 
 
+def _verify_lab(f, labs_by_row, rejected, verified):
+    m = re.search(r"第(\d+)行", f["source"])
+    row = labs_by_row.get(int(m.group(1))) if m else None
+    if row is None:
+        rejected.append({**f, "reason": f"出处不存在：{f['source']}"})
+    elif f["name"] != row["name"]:
+        rejected.append({**f, "reason": f"项目名与出处不符：原文『{row['name']}』"})
+    elif f["value"] != row["value"]:
+        rejected.append({**f, "reason": f"结果值与原文不符：原文『{row['value']}』"})
+    else:
+        verified.append(f)
+
+
 def verify_all(state: VisitState) -> dict:
-    """核对闸门按栏目分科：用药走药名/剂量核对，检查所见走项目名/印象核对"""
+    """核对闸门按栏目分科：用药走药名/剂量核对，检查所见走项目名/印象核对，
+       检验所见走项目名/结果值核对（第 17 课）"""
     orders_by_row = {o["row"]: o for o in state["orders"]}
     exams_by_row = {e["row"]: e for e in state["exams"]}
+    labs_by_row = {l["row"]: l for l in state["labs"]}
     seen, verified, rejected = set(), [], []
     for f in state["facts"]:
         sec = f.get("section", SECTION_DRUG)   # 兼容旧格式：没有 section 默认按用药处理
@@ -120,7 +159,9 @@ def verify_all(state: VisitState) -> dict:
         if key in seen:
             continue
         seen.add(key)
-        if sec == SECTION_EXAM:
+        if sec == SECTION_LAB:
+            _verify_lab(f, labs_by_row, rejected, verified)
+        elif sec == SECTION_EXAM:
             _verify_exam(f, exams_by_row, rejected, verified)
         else:
             _verify_drug(f, orders_by_row, rejected, verified)
@@ -135,8 +176,9 @@ def verify_all(state: VisitState) -> dict:
         print(f"[核对] 第{attempts + 1}轮：用药通过率 {rate:.0%} 低于 {PASS_RATE_FLOOR:.0%} → 退回重抽")
     else:
         n_exam = len([f for f in verified if f.get("section") == SECTION_EXAM])
+        n_lab = len([f for f in verified if f.get("section") == SECTION_LAB])
         print(f"[核对] 用药通过 {len(drug_ok)}/{len(drug_facts)} 条（{rate:.0%}），"
-              f"检查所见通过 {n_exam} 条，剔除 {len(rejected)} 条")
+              f"检查所见通过 {n_exam} 条，检验所见通过 {n_lab} 条，剔除 {len(rejected)} 条")
     return {"verified": verified, "rejected": rejected,
             "qc": {"pass_rate": rate, "retry": retry, "attempts": attempts + (1 if retry else 0)}}
 
@@ -155,13 +197,15 @@ def after_verify(state: VisitState):
 
 
 def build_extraction_subgraph():
-    """「抽取科」组装完毕：调度员 → 两种工位 → 核对 → （重试 | 出科）"""
+    """「抽取科」组装完毕：调度员 → 三种工位 → 核对 → （重试 | 出科）"""
     g = StateGraph(VisitState)
     g.add_node("extract_drug_chunk", extract_drug_chunk)
     g.add_node("extract_exam_chunk", extract_exam_chunk)
+    g.add_node("extract_lab_chunk", extract_lab_chunk)
     g.add_node("verify_all", verify_all)
     g.add_conditional_edges(START, dispatch)         # 进科即派工
     g.add_edge("extract_drug_chunk", "verify_all")
     g.add_edge("extract_exam_chunk", "verify_all")
+    g.add_edge("extract_lab_chunk", "verify_all")
     g.add_conditional_edges("verify_all", after_verify)
     return g.compile()

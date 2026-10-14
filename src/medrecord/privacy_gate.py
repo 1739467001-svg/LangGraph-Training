@@ -86,10 +86,11 @@ def scan(text: str, banned_names=None) -> dict:
 
 
 def gate_node(state: dict) -> dict:
-    """第一道闸节点：流程开头，把要进模型的全部文本扫一遍"""
+    """第一道闸节点：流程开头，把要进流程的全部文本扫一遍（三栏目）"""
     configure_gate()
     text = "\n".join(o["text"] for o in state["orders"])
     text += "\n" + "\n".join(e["item_name"] + e["impression"] for e in state["exams"])
+    text += "\n" + "\n".join(l["name"] + l["value"] for l in state.get("labs", []))
     result = scan(text)
     if result["passed"]:
         print("[出口闸门①] 放行：未发现疑似身份信息")

@@ -22,7 +22,7 @@ from medrecord.state import DATA_DIR, OUT_DIR, CHUNK_SIZE
 
 
 def _init(patient_id: str) -> dict:
-    return {"folder": patient_id, "patient_id": patient_id, "orders": [], "exams": [],
+    return {"folder": patient_id, "patient_id": patient_id, "orders": [], "exams": [], "labs": [],
             "facts": [], "verified": [], "rejected": [], "qc": {}, "gate": {},
             "draft": "", "review": {}, "evaluation": ""}
 
@@ -44,13 +44,18 @@ def run_one(app, patient_id: str) -> dict:
     exam_total = sum(1 for e in final["exams"] if e["impression"] != "【待医生补充】")
     exam_done = {m.group(1) for f in exam
                  for m in [re.search(r"第(\d+)行", f["source"])] if m}
+    lab = [f for f in final["verified"] if f.get("section") == "检验所见"]
+    lab_total = sum(1 for l in final["labs"] if l["value"] != "【待医生补充】")
+    lab_done = {m.group(1) for f in lab
+                for m in [re.search(r"第(\d+)行", f["source"])] if m}
     return {
         "patient": patient_id,
         "orders": len(final["orders"]),
         "exams_all": len(final["exams"]),
         "exams_total": exam_total,
         "workers": (math.ceil(len(final["orders"]) / CHUNK_SIZE)
-                    + math.ceil(len(final["exams"]) / CHUNK_SIZE)),
+                    + math.ceil(len(final["exams"]) / CHUNK_SIZE)
+                    + math.ceil(len(final["labs"]) / CHUNK_SIZE)),
         "drug": len(drug), "std": len(std_unique), "std_docs": len(std),
         "covered": len(matched),
         "coverage": (len(matched) / len(std_unique)) if std_unique else 0.0,
@@ -58,6 +63,8 @@ def run_one(app, patient_id: str) -> dict:
         "fab": len(final["rejected"]),
         "exam": len(exam),
         "exam_cov": (len(exam_done) / exam_total) if exam_total else 0.0,
+        "lab": len(lab),
+        "lab_cov": (len(lab_done) / lab_total) if lab_total else 0.0,
         "missed": missed,
     }
 
@@ -67,13 +74,13 @@ def build_report(rows: list) -> str:
              f"生成时间：{datetime.now().isoformat(timespec='seconds')}", "",
              "治理说明：本批量运行的草稿一律「驳回」归档（status=未过审），",
              "正式记录必须由医生逐个审核——**自动化评估不等于自动化批准**。", "",
-             "| 患者 | 医嘱 | 检查行 | 工位 | 用药草稿 | 标准答案(种) | 覆盖率 | 多报 | 编造 | 检查自覆盖 |",
-             "|---|---|---|---|---|---|---|---|---|---|"]
+             "| 患者 | 医嘱 | 检查行 | 检验行 | 工位 | 用药草稿 | 标准答案(种) | 覆盖率 | 多报 | 编造 | 检查自覆盖 | 检验自覆盖 |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         lines.append(
-            f"| {r['patient']} | {r['orders']} | {r['exams_total']} | {r['workers']} | "
+            f"| {r['patient']} | {r['orders']} | {r['exams_total']} | {r['lab']} | {r['workers']} | "
             f"{r['drug']} | {r['std']} | {r['coverage']:.0%} | {r['extra']} | "
-            f"{r['fab']} | {r['exam_cov']:.0%} |")
+            f"{r['fab']} | {r['exam_cov']:.0%} | {r['lab_cov']:.0%} |")
 
     covs = [r["coverage"] for r in rows if "coverage" in r]
     missed_count = {}
