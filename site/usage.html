@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>使用手册 · medrecord 病历文书流水线</title>
-<meta name="description" content="medrecord 病历文书流水线官方使用手册：环境准备、数据就位、四种工作模式、输出解读、真模型接入与故障排查。">
+<title>交互式使用教程 · medrecord 病历文书流水线</title>
+<meta name="description" content="medrecord 病历文书流水线交互式使用教程：流水线探索器、一条数据的旅程、终端实况、防编造实验、环境准备、四种工作模式与故障排查。">
 <style>
   :root{
     --bg:#f6f8fa; --surface:#ffffff; --ink:#1a2332; --ink-2:#5a6a7e; --ink-3:#8895a7;
     --line:#e3e8ee; --brand:#0e6e5c; --brand-2:#0a5446; --brand-soft:#e7f3f0;
-    --accent:#1f5eff; --warn:#b45309; --warn-soft:#fef3e2; --danger:#c0392b; --ok:#0e6e5c;
-    --code-bg:#0f1720; --code-ink:#d7e2ee; --radius:10px;
+    --accent:#1f5eff; --warn:#b45309; --warn-soft:#fef3e2; --danger:#c0392b; --danger-soft:#fdecea;
+    --ok-soft:#e7f3f0; --code-bg:#0f1720; --code-ink:#d7e2ee; --radius:10px;
     --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -35,7 +35,7 @@
   .kicker{display:inline-block;font-size:12.5px;letter-spacing:.14em;background:rgba(255,255,255,.14);
           border:1px solid rgba(255,255,255,.25);padding:4px 12px;border-radius:999px;margin-bottom:14px}
   .hero h1{font-size:30px;font-weight:700}
-  .hero p.sub{margin-top:10px;font-size:15.5px;opacity:.92;max-width:780px}
+  .hero p.sub{margin-top:10px;font-size:15.5px;opacity:.92;max-width:820px}
   .herosteps{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap}
   .hstep{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:9px;
          padding:10px 16px;font-size:13px}
@@ -48,11 +48,80 @@
   .sec-sub{color:var(--ink-2);font-size:14px;margin-bottom:18px}
   h3{font-size:16px;font-weight:700;margin:20px 0 10px}
 
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
   .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
   .card h4{font-size:14.5px;font-weight:700;margin-bottom:6px}
   .card p{font-size:13.5px;color:var(--ink-2)}
 
+  /* ── 流水线探索器 ── */
+  .pflow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:14px 0 10px}
+  .pstn{flex:1 1 96px;min-width:92px;background:var(--surface);border:1.5px solid var(--line);
+        border-radius:9px;padding:10px 8px;text-align:center;cursor:pointer;position:relative;
+        font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--brand-2);transition:all .15s}
+  .pstn:hover{border-color:var(--brand);transform:translateY(-2px)}
+  .pstn.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .pstn .cn{display:block;font-family:inherit;font-size:11.5px;font-weight:400;opacity:.85;margin-top:2px}
+  .parr{align-self:center;color:var(--ink-3);font-size:15px;padding:0 1px}
+  .pdetail{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+           padding:18px 20px;margin-top:4px;min-height:180px}
+  .pdetail h4{font-size:15.5px;font-weight:700;margin-bottom:8px;color:var(--brand-2)}
+  .pdetail h5{font-size:12px;letter-spacing:.1em;color:var(--ink-3);margin:12px 0 4px}
+  .pdetail p,.pdetail li{font-size:13.5px;color:var(--ink-2)}
+  .pdetail ul{list-style:none}
+  .pdetail li{padding:3px 0 3px 16px;position:relative}
+  .pdetail li::before{content:"";position:absolute;left:2px;top:11px;width:6px;height:6px;border-radius:50%;background:var(--brand)}
+  .pdetail .io{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+  .pdetail .io>div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+  .pdetail .io .k{font-size:11px;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase}
+  .pdetail .io .v{font-family:var(--mono);font-size:12.3px;margin-top:2px;word-break:break-all}
+  @media(max-width:680px){.pdetail .io{grid-template-columns:1fr}}
+  .mech{background:var(--brand-soft);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--brand-2);margin-top:10px}
+  .mech b{font-weight:700}
+
+  /* ── 旅程步进 ── */
+  .trace{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .trace-steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .tbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 13px;
+        font-size:12.5px;cursor:pointer;color:var(--ink-2);font-family:inherit}
+  .tbtn.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .tstage{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:16px 18px}
+  .tstage .cap{font-size:12px;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase;margin-bottom:8px}
+  .tstage .body{font-family:var(--mono);font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-all}
+  .tstage .note{margin-top:10px;font-size:13px;color:var(--ink-2);font-family:inherit}
+  .tstage .note b{color:var(--brand-2)}
+  .tnav{display:flex;gap:8px;margin-top:14px}
+  .tnav .btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 18px;
+             font-size:13.5px;cursor:pointer;font-family:inherit;color:var(--ink)}
+  .tnav .btn:disabled{opacity:.4;cursor:not-allowed}
+  .tnav .btn.main{background:var(--brand);border-color:var(--brand);color:#fff}
+  .tnav .pos{margin-left:auto;align-self:center;font-size:12.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+  /* ── 终端模拟 ── */
+  .term{background:var(--code-bg);border-radius:10px;overflow:hidden}
+  .term-bar{background:#1c2937;padding:8px 14px;display:flex;gap:6px;align-items:center}
+  .term-bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .term-bar .r{background:#ff5f57}.term-bar .y{background:#febc2e}.term-bar .g{background:#28c840}
+  .term-bar .tt{margin-left:10px;color:#7fa3b8;font-family:var(--mono);font-size:12px}
+  .term-body{padding:14px 18px;font-family:var(--mono);font-size:12.5px;line-height:1.85;
+             color:var(--code-ink);overflow-x:auto;white-space:pre}
+  .term-body .g{color:#5ad0a5}.term-body .y{color:#ffd479}.term-body .b{color:#7fb8ff}.term-body .dim{color:#5f7183}
+
+  /* ── 防编造实验 ── */
+  .lab{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+  .lab .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+  .lab input{border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px;
+             font-family:var(--mono);width:150px;color:var(--ink)}
+  .lab .btn{border:none;background:var(--brand);color:#fff;border-radius:8px;padding:9px 18px;
+            font-size:13.5px;cursor:pointer;font-family:inherit;font-weight:500}
+  .lab .btn.sec{background:var(--surface);color:var(--brand-2);border:1px solid var(--brand)}
+  .lab .verdict{margin-top:14px;border-radius:9px;padding:14px 16px;font-size:13.5px;display:none}
+  .lab .verdict.pass{display:block;background:var(--ok-soft);border:1px solid #cfe6e0;color:var(--brand-2)}
+  .lab .verdict.fail{display:block;background:var(--danger-soft);border:1px solid #f2c9c3;color:var(--danger)}
+  .lab .verdict .vh{font-weight:700;font-size:14.5px;margin-bottom:4px}
+  .lab .check{font-family:var(--mono);font-size:12.3px;line-height:1.9}
+  .lab .check .ok{color:var(--ok)}.lab .check .no{color:var(--danger)}
+
+  /* ── 快速开始/步骤 ── */
   .steps{counter-reset:st;margin:14px 0}
   .step{position:relative;padding:14px 16px 14px 58px;background:var(--surface);
         border:1px solid var(--line);border-radius:var(--radius);margin-bottom:10px}
@@ -71,12 +140,12 @@
   .copybtn{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.12);color:#d7e2ee;
            border:1px solid rgba(255,255,255,.2);border-radius:6px;font-size:11.5px;
            padding:3px 10px;cursor:pointer;font-family:inherit}
-  .copybtn:hover{background:rgba(255,255,255,.22)}
 
   .tbl{width:100%;border-collapse:collapse;background:var(--surface);border-radius:var(--radius);
        overflow:hidden;border:1px solid var(--line);font-size:13.5px}
   .tbl th{background:#f0f3f6;text-align:left;padding:9px 12px;font-weight:700;font-size:12.5px;color:var(--ink-2)}
   .tbl td{padding:9px 12px;border-top:1px solid var(--line);vertical-align:top}
+  .table-responsive{overflow-x:auto}
 
   .tree{background:var(--code-bg);color:var(--code-ink);border-radius:9px;padding:14px 18px;
         font-family:var(--mono);font-size:12.8px;line-height:1.75;overflow-x:auto}
@@ -102,6 +171,9 @@
   .pause{border-style:dashed;border-color:var(--warn);background:var(--warn-soft)}
   .pause h5{color:var(--warn)}
 
+  .note{background:var(--warn-soft);border:1px solid #f3dfc0;border-radius:9px;padding:12px 16px;
+        font-size:13.5px;color:#7a4a12;margin:12px 0}
+  .note b{color:var(--warn)}
   .mrow{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
   .mrow:first-of-type{border-top:none}
   .mrow .k{font-weight:700;font-size:13.5px;color:var(--brand-2)}
@@ -110,17 +182,13 @@
 
   details.acc{background:var(--surface);border:1px solid var(--line);border-radius:9px;margin-bottom:8px;overflow:hidden}
   details.acc summary{list-style:none;cursor:pointer;padding:12px 16px;font-size:13.5px;font-weight:700;
-                      display:flex;gap:10px;align-items:center}
+                      display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   details.acc summary::-webkit-details-marker{display:none}
   details.acc summary:hover{background:#fbfcfd}
   details.acc summary .err{font-family:var(--mono);font-size:11.5px;color:var(--danger);
-                           background:#fdecea;border-radius:5px;padding:1px 8px;flex:none}
+                           background:var(--danger-soft);border-radius:5px;padding:1px 8px}
   details.acc .abody{border-top:1px solid var(--line);padding:12px 16px;font-size:13.5px;color:var(--ink-2)}
   details.acc .abody b{color:var(--ink)}
-
-  .note{background:var(--warn-soft);border:1px solid #f3dfc0;border-radius:9px;padding:12px 16px;
-        font-size:13.5px;color:#7a4a12;margin:12px 0}
-  .note b{color:var(--warn)}
 
   footer{margin-top:56px;border-top:1px solid var(--line);background:var(--surface)}
   .foot{max-width:1120px;margin:0 auto;padding:26px 20px;font-size:12.5px;color:var(--ink-3);
@@ -131,10 +199,10 @@
 
 <header>
   <div class="topbar">
-    <div class="logo"><span class="mark">Dr</span>medrecord 使用手册</div>
+    <div class="logo"><span class="mark">Dr</span>medrecord 交互式使用教程</div>
     <nav class="topnav">
       <a href="index.html">课程站点</a>
-      <a class="here" href="usage.html">使用手册</a>
+      <a class="here" href="usage.html">使用教程</a>
       <a href="https://github.com/1739467001-svg/LangGraph-Training" rel="noopener">GitHub</a>
     </nav>
   </div>
@@ -142,51 +210,100 @@
 
 <div class="hero">
   <div class="wrap">
-    <span class="kicker">官方用户手册 · v1.0 · 全部命令实测通过</span>
-    <h1>medrecord 病历文书流水线 · 使用指南</h1>
-    <p class="sub">从装好环境到跑出第一份带出处的病历打印稿，再到医生两进程审核与批量验收——
-       本手册面向新用户与运维者，所有命令均在项目实测通过。</p>
+    <span class="kicker">交互式使用教程 · 全部示例取自项目实测数据</span>
+    <h1>点着学：看懂 medrecord 的每一站</h1>
+    <p class="sub">四个互动模块带你上手：① 流水线探索器——点任意一站看它做什么；② 一条数据的旅程——
+       跟着「0.9%氯化钠注射液」从表格走到打印稿；③ 终端实况——真实运行输出逐行讲解；④ 防编造实验——
+       亲手篡改一个检验值，看闸门怎么拦你。</p>
     <div class="herosteps">
-      <div class="hstep"><b>① 装环境</b><span class="n">5 分钟</span></div>
-      <div class="hstep"><b>② 备数据</b><span class="n">脱敏数据就位</span></div>
-      <div class="hstep"><b>③ 跑流水线</b><span class="n">1 条命令</span></div>
-      <div class="hstep"><b>④ 医生审核</b><span class="n">批准或驳回</span></div>
-      <div class="hstep"><b>⑤ 拿打印稿</b><span class="n">MD + XML + 评估</span></div>
+      <div class="hstep"><b>① 流水线探索器</b><span class="n">9 站可点击</span></div>
+      <div class="hstep"><b>② 一条数据的旅程</b><span class="n">6 步动画</span></div>
+      <div class="hstep"><b>③ 终端实况</b><span class="n">逐行讲解</span></div>
+      <div class="hstep"><b>④ 防编造实验</b><span class="n">亲手试试</span></div>
     </div>
   </div>
 </div>
 
 <div class="wrap">
 
-<!-- ═══ 系统概览 ═══ -->
-<section id="overview">
-  <h2><span class="no">00</span>这个系统是什么</h2>
-  <p class="sec-sub">medrecord 是一条「医院导出数据 → 病历文书草稿」的流水线：算术和核对交给代码，
-     理解和成文交给大模型（可插拔），最后由医生确认。九个站点全部有代码与测试。</p>
-  <div class="card">
-    <p style="font-family:var(--mono);font-size:12.8px;line-height:2">
-      <b style="color:var(--brand-2)">读表</b> → <b style="color:var(--brand-2)">出口闸门</b>（身份信息即停）
-      → <b style="color:var(--brand-2)">计算器</b>（住院天数/体温）
-      → <b style="color:var(--brand-2)">抽取科</b>（3 种工位并行：用药·模型 / 检查·代码 / 检验·代码）
-      → <b style="color:var(--brand-2)">逐字核对</b>（出处/名称/数值）
-      → <b style="color:var(--brand-2)">书记员</b>（按栏目分批成文）
-      → <b style="color:var(--brand-2)">成文质检</b>（编号引用，带意见重写≤2）
-      → <b style="color:var(--brand-2)">医生审核</b>（暂停等人）
-      → <b style="color:var(--brand-2)">排版+评估</b></p>
-    <p class="sec-sub" style="margin:8px 0 0">全程防编造：出处缺失即剔除留痕；「待医生补充」由代码统一添加；AI 产出的永远是草稿。</p>
+<!-- ═══ 1. 流水线探索器 ═══ -->
+<section id="explorer">
+  <h2><span class="no">01</span>流水线探索器</h2>
+  <p class="sec-sub">点击任意一站，查看它做什么、输入输出是什么、以及它的防编造机制。示例全部来自测试患者甲的真实运行。</p>
+  <div class="pflow" id="pflow" role="tablist" aria-label="流水线站点"></div>
+  <div class="pdetail" id="pdetail" aria-live="polite"></div>
+</section>
+
+<!-- ═══ 2. 一条数据的旅程 ═══ -->
+<section id="trace">
+  <h2><span class="no">02</span>一条数据的旅程</h2>
+  <p class="sec-sub">跟着真实的一条医嘱——「0.9%氯化钠注射液（双阀）100 ml」——走完整个流水线。这是理解系统最快的 60 秒。</p>
+  <div class="trace">
+    <div class="trace-steps" id="tsteps" role="tablist" aria-label="旅程步骤"></div>
+    <div class="tstage" id="tstage" aria-live="polite"></div>
+    <div class="tnav">
+      <button type="button" class="btn" id="tprev">← 上一步</button>
+      <button type="button" class="btn main" id="tnext">下一步 →</button>
+      <span class="pos" id="tpos"></span>
+    </div>
   </div>
 </section>
 
-<!-- ═══ 快速开始 ═══ -->
+<!-- ═══ 3. 终端实况 ═══ -->
+<section id="terminal">
+  <h2><span class="no">03</span>终端实况：跑一次长什么样</h2>
+  <p class="sec-sub">这是 <code>python3 -m medrecord.run 测试患者甲 批准</code> 的真实输出（节选），逐段标注它在做什么。</p>
+  <div class="term">
+    <div class="term-bar"><i class="r"></i><i class="y"></i><i class="g"></i><span class="tt">terminal — medrecord.run 测试患者甲 批准</span></div>
+    <div class="term-body"><span class="dim">$ cd src && python3 -m medrecord.run 测试患者甲 批准</span>
+<span class="g">[出口闸门①]</span> 放行：未发现疑似身份信息          <span class="dim">← 两道闸之一，身份信息即停</span>
+<span class="g">[计算器]</span> 产出 5 条计算事实（全部由代码算出，模型未参与）   <span class="dim">← 住院天数 7/4/3 天、最高体温 36.9℃</span>
+<span class="b">[调度]</span> 用药 200 条 → 10 个模型工位；检查所见 25 条 → 2 个代码工位；检验所见 391 条 → 20 个代码工位
+<span class="dim">[模型工位药0] 20 条 → 交货 2 条 …（32 个工位并行）</span>
+<span class="g">[核对]</span> 用药通过 37/37 条（100%），检查所见通过 25 条，检验所见通过 389 条，剔除 0 条
+<span class="g">[书记员]</span> 分发 3 个成文工位：用药记录(37条)、检查所见(25条)、检验所见(389条)
+<span class="g">[质检·成文]</span> 第1轮：451 句全部通过
+<span class="y">[暂停]</span> 流程停在医生审核站                        <span class="dim">← interrupt：等人，不等人不往下走</span>
+<span class="dim">$ （医生表态）Command(resume="批准")</span>
+<span class="g">[审核]</span> 医生态度：批准
+<span class="g">[排版]</span> Markdown 打印稿 → outputs/FAKE0001_病历草稿.md
+<span class="g">[导出]</span> XML → outputs/lesson13_FAKE0001_文书草稿.xml
+<span class="g">═══ 评估报告 ═══</span>
+用药记录：草稿 37 条；标准答案 6 份（去重 5 种）
+  覆盖：命中 7 条，覆盖 4/5 种 → 覆盖率 <span class="y">80%</span>
+检验所见：草稿 389 条，自覆盖率 <span class="y">100%</span>
+编造：<span class="y">0 条</span>（核对剔除，三栏目合计）</div>
+  </div>
+  <p class="sec-sub" style="margin-top:10px">怎么读：<span class="term-body" style="display:inline;padding:0;background:none"><span class="g">绿色</span>=正常推进，<span class="y">黄色</span>=需要人留意的数字（暂停/覆盖率），<span class="dim">灰色</span>=讲解标注。</p>
+</section>
+
+<!-- ═══ 4. 防编造实验 ═══ -->
+<section id="lab">
+  <h2><span class="no">04</span>防编造实验：亲手篡改一个检验值</h2>
+  <p class="sec-sub">这是流水线最核心的机制。下面是一条真实检验事实——试着把结果值改成别的，看核对闸门的反应。</p>
+  <div class="lab">
+    <h4>检验事实（已通过抽取，等待核对）</h4>
+    <p style="font-family:var(--mono);font-size:12.8px">name: 谷丙转氨酶 ｜ value: <input id="labval" type="text" value="10.8" maxlength="8" aria-label="结果值">
+      ｜ units: U/L ｜ source: 检验结果.xlsx 第2行 检验号26052068664</p>
+    <p style="font-size:12.5px;color:var(--ink-3)">原文（检验结果.xlsx 第2行）：谷丙转氨酶 <b>10.8</b> U/L —— 闸门将逐字比对</p>
+    <div class="row">
+      <button type="button" class="btn" id="lab-ok">提交核对（保持 10.8）</button>
+      <button type="button" class="btn sec" id="lab-bad">篡改为 110.8（十倍！）</button>
+      <button type="button" class="btn sec" id="lab-reset">重置</button>
+    </div>
+    <div class="verdict" id="lab-verdict" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ═══ 5. 快速开始 ═══ -->
 <section id="quickstart">
-  <h2><span class="no">01</span>五分钟跑通（Quick Start）</h2>
-  <p class="sec-sub">前提：已按第 02 节装好环境、备好数据。以下三条命令跑完全流程。</p>
+  <h2><span class="no">05</span>五分钟跑通（Quick Start）</h2>
+  <p class="sec-sub">前提：环境已装好（见第 07 节）、数据已就位（见第 06 节）。三条命令跑完全流程。</p>
   <div class="steps">
     <div class="step"><h4>进入项目并运行完整流水线</h4>
       <pre><code>cd LangChainLangGraph实战性学习/src
 python3 -m medrecord.run 测试患者甲 批准</code></pre>
-      <p>你会依次看到：出口闸门放行 → 计算器产出计算事实 → 调度三种工位并行 → 核对结果 →
-         书记员分批成文 → 质检 → <b>流程暂停在医生审核站</b> → 自动以「批准」恢复 → 评估报告。</p></div>
+      <p>第一个参数是患者文件夹名，第二个是医生审核结论（批准 / 驳回）。就是上面终端实况里的那条命令。</p></div>
     <div class="step"><h4>查看三份产物</h4>
       <pre><code>../outputs/FAKE0001_病历草稿.md              # 排版打印稿（给医生看）
 ../outputs/lesson13_FAKE0001_文书草稿.xml    # 结构化草稿（对接系统用）
@@ -196,60 +313,51 @@ python3 -m medrecord.run 测试患者甲 批准</code></pre>
   </div>
 </section>
 
-<!-- ═══ 环境准备 ═══ -->
-<section id="install">
-  <h2><span class="no">02</span>环境准备</h2>
+<!-- ═══ 6. 环境与数据 ═══ -->
+<section id="setup">
+  <h2><span class="no">06</span>环境与数据准备</h2>
   <h3>依赖安装</h3>
-  <pre><code>python3 -m pip install langgraph langchain-core openpyxl pytest</code></pre>
-  <p class="sec-sub" style="margin-top:6px">以下两项按需安装：<code>langgraph-checkpoint-sqlite</code>（两进程审核模式需要）、
-     <code>langchain-openai</code>（接入真模型时才需要，基线模式零依赖）。</p>
+  <pre><code>python3 -m pip install langgraph langchain-core openpyxl pytest
+<span class="cm"># 按需：两进程审核模式 + 真模型适配器</span>
+python3 -m pip install langgraph-checkpoint-sqlite langchain-openai</code></pre>
   <div class="table-responsive">
   <table class="tbl">
-    <thead><tr><th>组件</th><th>本手册实测版本</th><th>用途</th></tr></thead>
+    <thead><tr><th>组件</th><th>实测版本</th><th>用途</th></tr></thead>
     <tbody>
       <tr><td>Python</td><td>3.9.6（真实仓库 3.11）</td><td>运行时</td></tr>
       <tr><td>langgraph</td><td>0.6.11</td><td>流程编排</td></tr>
-      <tr><td>langchain-core</td><td>0.3.86</td><td>提示词/模型/结构化输出</td></tr>
-      <tr><td>openpyxl</td><td>3.1.5</td><td>读取医院导出的表格</td></tr>
+      <tr><td>langchain-core</td><td>0.3.86</td><td>提示词 / 模型 / 结构化输出</td></tr>
+      <tr><td>openpyxl</td><td>3.1.5</td><td>读取医院导出表格</td></tr>
       <tr><td>pytest</td><td>8.4.2</td><td>61 项自动化测试</td></tr>
       <tr><td>langgraph-checkpoint-sqlite</td><td>2.0.11</td><td>审核存档落盘（两进程模式）</td></tr>
       <tr><td>langchain-openai</td><td>可选</td><td>真模型适配器（OpenAI 兼容端点）</td></tr>
     </tbody>
   </table>
   </div>
-  <div class="note"><b>版本提示：</b>langgraph 0.6.x 与 1.2.x 的核心接口（interrupt / Command / Send /
-     InMemorySaver）均已实测可用；换环境后先跑 <code>python3 -m pytest -q</code> 确认即可。</div>
-</section>
-
-<!-- ═══ 数据准备 ═══ -->
-<section id="data">
-  <h2><span class="no">03</span>数据准备</h2>
-  <p class="sec-sub">流水线只读「清洗后的数据」目录。若你拿到的原始数据未脱敏，先用随附工具生成脱敏副本。</p>
-  <pre><code><span class="cm"># 原始数据 → 脱敏副本（两遍扫描+模式兜底+反向校验，一步完成）</span>
-python3 deid_tools/deidentify.py
-<span class="cm"># 生成结构报告（不含任何单元格内容）</span>
-python3 deid_tools/gen_structure_report.py</code></pre>
-  <h3>目录结构（流水线的读取约定）</h3>
+  <h3>数据就位（目录约定）</h3>
+  <p class="sec-sub">若拿到的是未脱敏原始数据，先运行脱敏工具生成副本：</p>
+  <pre><code>python3 deid_tools/deidentify.py            <span class="cm"># 原始数据 → 脱敏副本（两遍扫描+反向校验）</span>
+python3 deid_tools/gen_structure_report.py   <span class="cm"># 生成结构报告（不含任何单元格内容）</span></code></pre>
   <div class="tree">
 <span class="d">清洗后的数据/</span><br>
 └── <span class="d">住院/</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;├── <span class="d">测试患者甲/</span>  <span class="c"># 每位患者一个文件夹（脱敏假名）</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp; ├── 医嘱.xlsx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c"># 用药栏目数据源（80 列）</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp; ├── 检查申请主表 / 检查申请项目 / 检查结果.xlsx&nbsp;&nbsp;<span class="c"># 检查所见数据源</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp; ├── 检验申请主表 / 检验申请项目 / 检验结果.xlsx&nbsp;&nbsp;<span class="c"># 检验所见数据源</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp; ├── 生命体征.xlsx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c"># 计算器数据源（入院/出院事件行）</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp; └── <span class="hot">FAKE0001_测试患者甲(2099…).zip</span>&nbsp;&nbsp;<span class="c"># 医生写的标准答案（评估用）</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp; ├── 医嘱.xlsx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c"># 用药栏目（80 列）</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp; ├── 检查申请主表 / 检查申请项目 / 检查结果.xlsx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp; ├── 检验申请主表 / 检验申请项目 / 检验结果.xlsx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp; ├── 生命体征.xlsx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c"># 计算器数据源（含入院/出院事件行）</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp; └── <span class="hot">FAKE0001_测试患者甲(2099…).zip</span>&nbsp;<span class="c"># 医生写的标准答案（评估对照用）</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;├── <span class="d">测试患者乙/</span> … <span class="d">测试患者戊/</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;└── 脱敏说明.md<br>
 <span class="d">outputs/</span>&nbsp;&nbsp;<span class="c"># 所有产物落在这里（git 忽略）</span>
   </div>
-  <div class="note"><b>数据安全：</b>原始病历数据（<code>病历资料/</code>）与真名映射表（<code>deid_tools/mapping_真实值勿提交.json</code>）
-     永不入库、不上传；<code>.gitignore</code> 已拦截。推送前执行姓名/住院号反向扫描是固定工序。</div>
+  <div class="note"><b>数据安全：</b>原始病历（<code>病历资料/</code>）与真名映射表永不入库、不上传；<code>.gitignore</code> 已拦截；
+     推送前执行姓名/住院号反向扫描是固定工序（本站发布时实测 0 命中）。</div>
 </section>
 
-<!-- ═══ 四种工作模式 ═══ -->
+<!-- ═══ 7. 四种工作模式 ═══ -->
 <section id="modes">
-  <h2><span class="no">04</span>四种工作模式</h2>
+  <h2><span class="no">07</span>四种工作模式</h2>
   <p class="sec-sub">按场景选择。所有命令在 <code>src/</code> 目录下执行。</p>
   <div class="modes" role="tablist" aria-label="工作模式">
     <button class="on" data-m="m1" role="tab" aria-selected="true" type="button">A · 单患者完整流水线</button>
@@ -263,11 +371,10 @@ python3 deid_tools/gen_structure_report.py</code></pre>
       <div class="step"><h4>运行命令</h4>
         <pre><code>cd src
 python3 -m medrecord.run 测试患者甲 批准</code></pre>
-        <p>第一个参数是患者文件夹名，第二个是医生审核结论（批准 / 驳回）。省略时默认「测试患者甲 批准」。</p></div>
+        <p>第一个参数是患者文件夹名，第二个是医生审核结论（批准 / 驳回）。即第 03 节终端实况里的命令。</p></div>
       <div class="step"><h4>流程会经过什么</h4>
-        <p>闸门放行 → 计算器（住院天数/体温）→ 10+2+20 个工位并行抽取 → 核对（不合规剔除留痕）→
-           书记员 3 个栏目工位分批成文 → 编号质检 → <b>暂停在审核站</b> → 按你给定的结论恢复 →
-           打印稿 + XML + 评估报告落盘。</p></div>
+        <p>闸门 → 计算器 → 32 个工位并行抽取 → 核对 → 书记员 3 栏目分批成文 → 编号质检 →
+           <b>暂停在审核站</b> → 按给定结论恢复 → 打印稿 + XML + 评估落盘。</p></div>
       <div class="step"><h4>换患者、换结论</h4>
         <pre><code>python3 -m medrecord.run 测试患者丙 批准
 python3 -m medrecord.run 测试患者甲 驳回   <span class="cm"># 草稿归档，标注「不得作为正式病历」</span></code></pre></div>
@@ -275,22 +382,22 @@ python3 -m medrecord.run 测试患者甲 驳回   <span class="cm"># 草稿归�
   </div>
 
   <div class="modepanel" id="m2" role="tabpanel" hidden>
-    <p class="sec-sub">真实医院场景：提交系统和医生审核往往隔着一台机器、一个夜晚。存档落盘（SQLite），两个独立进程接力。</p>
+    <p class="sec-sub">真实医院场景：提交系统和医生审核隔着一台机器、一个夜晚。存档落盘（SQLite），两个独立进程接力。</p>
     <div class="seq">
       <div class="box who">护士站<br>（系统）</div>
       <div class="arr">→</div>
       <div class="box"><h5>python3 -m medrecord.submit 测试患者乙</h5>
-        <p>跑完抽取核对 → 挂在审核站 → <b>进程退出</b>。存档：<code>outputs/checkpoints.sqlite</code>，
+        <p>跑完抽取核对 → 挂在审核站 → <b>进程退出</b>。存档 <code>outputs/checkpoints.sqlite</code>，
            thread_id：<code>medrecord-测试患者乙</code></p></div>
       <div class="arr">→</div>
-      <div class="box pause"><h5> overnight（时间流逝）</h5>
+      <div class="box pause"><h5>overnight</h5>
         <p>草稿睡在磁盘里；<code>get_state()</code> 可查看挂起位置与待审材料</p></div>
       <div class="arr">→</div>
       <div class="box who">医生站<br>（次日）</div>
       <div class="arr">→</div>
       <div class="box"><h5>python3 -m medrecord.review 测试患者乙 批准</h5>
         <p>新进程从磁盘读回草稿 → 医生表态 → 从暂停点继续 → 评估报告落盘。
-           结论「批准」出正式稿，「驳回」归档并警示。</p></div>
+           「批准」出正式稿，「驳回」归档并警示。</p></div>
     </div>
     <p class="sec-sub" style="margin-top:10px">要点：恢复<b>不是重放</b>——抽取与核对不会重跑；医生看到的就是暂停时那份。
        同一张图可同时挂起多位患者（thread_id 隔离）。</p>
@@ -300,7 +407,7 @@ python3 -m medrecord.run 测试患者甲 驳回   <span class="cm"># 草稿归�
     <pre><code>python3 -m medrecord.batch          <span class="cm"># 全部患者；也可 run_batch(["测试患者乙"])</span></code></pre>
     <div class="steps">
       <div class="step"><h4>它做什么</h4>
-        <p>编译一次图，按 thread_id 顺序跑全部患者；每位患者自动走完评估；产出
+        <p>编译一次图，按 thread_id 顺序跑全部患者；每位患者自动完成评估；产出
            <code>outputs/批量验收报告.md</code>（汇总表 + 自动解读）。</p></div>
       <div class="step"><h4>治理规则（重要）</h4>
         <p>批量评估的草稿一律走「驳回」归档——<b>自动化评估 ≠ 自动化批准</b>。
@@ -325,17 +432,17 @@ python3 -m pytest medrecord/tests/test_write_section.py -v   <span class="cm"># 
   </div>
 </section>
 
-<!-- ═══ 输出解读 ═══ -->
+<!-- ═══ 8. 输出解读 ═══ -->
 <section id="outputs">
-  <h2><span class="no">05</span>输出物解读</h2>
+  <h2><span class="no">08</span>输出物解读</h2>
   <h3>文件清单（全部在 outputs/，git 忽略）</h3>
   <div class="table-responsive">
   <table class="tbl">
     <thead><tr><th>文件</th><th>谁写的</th><th>内容与用途</th></tr></thead>
     <tbody>
-      <tr><td><code>FAKE0001_病历草稿.md</code></td><td>render 节点</td>
+      <tr><td><code>{患者}_病历草稿.md</code></td><td>render 节点</td>
           <td><b>给医生看的打印稿</b>：状态横幅（已过审/未过审）、住院概况表、三栏目成文句（真实出处）、质控记录</td></tr>
-      <tr><td><code>lesson13_FAKE0001_文书草稿.xml</code></td><td>export_eval</td>
+      <tr><td><code>lesson13_{患者}_文书草稿.xml</code></td><td>export_eval</td>
           <td>结构化草稿（对接医院系统的中间格式；真实 DCSoft 模板到位后按模板回填）</td></tr>
       <tr><td><code>批量验收报告.md</code></td><td>batch</td>
           <td>五患者汇总表 + 自动解读（覆盖率区间、未覆盖药物、成文/计算统计）</td></tr>
@@ -350,14 +457,14 @@ python3 -m pytest medrecord/tests/test_write_section.py -v   <span class="cm"># 
   <div class="mrow"><div class="k">多报</div><div class="v">草稿有、标准答案没有——常见原因是普通溶媒（氯化钠/葡萄糖）本就不单独写用药记录。
      多报交医生判断，<b>不自动定罪</b>。</div></div>
   <div class="mrow"><div class="k">编造</div><div class="v">核对剔除数（出处不存在/名称不符/数值篡改）。
-     实测五患者 <b>0 条进入草稿</b>——这是架构的可证明性质，有 61 项测试作证。</div></div>
-  <div class="mrow"><div class="k">打印稿怎么核</div><div class="v">每句后括号里的出处可直接回查：打开对应 xlsx 的第 N 行即可核对原文。
+     实测五患者 <b>0 条进入草稿</b>——架构的可证明性质，61 项测试作证。</div></div>
+  <div class="mrow"><div class="k">打印稿怎么核</div><div class="v">每句后括号里的出处可直接回查：打开对应 xlsx 的第 N 行核对原文。
      「待医生补充」= 该栏目无核对通过的事实，需医生手工补写。</div></div>
 </section>
 
-<!-- ═══ 接真模型 ═══ -->
+<!-- ═══ 9. 接真模型 ═══ -->
 <section id="realmodel">
-  <h2><span class="no">06</span>接入真模型</h2>
+  <h2><span class="no">09</span>接入真模型</h2>
   <p class="sec-sub">模型是插座：规则基线 ↔ 真模型切换只动环境变量，流程代码零改动。未批准时系统自动退回基线。</p>
   <div class="table-responsive">
   <table class="tbl">
@@ -372,17 +479,17 @@ python3 -m pytest medrecord/tests/test_write_section.py -v   <span class="cm"># 
   </div>
   <div class="note"><b>批准的语义：</b>清洗后的数据包含真实临床内容。把 <code>DRCOPILOT_DATA_APPROVED</code> 设为 1 之前，
      系统物理上不可能把数据发给任何厂商——这条纪律有测试锁死（未批准时工厂只返回基线）。</div>
-  <p class="sec-sub" style="margin-top:10px">上线后建议先跑 A/B：同一患者分别以基线与真模型运行，对比评估报告的三指标。
+  <p class="sec-sub" style="margin-top:10px">上线后建议先跑 A/B：同一患者分别以基线与真模型运行，对比评估报告三指标。
      比较三点：核对剔除率、成文质检退回率、速度与成本。</p>
 </section>
 
-<!-- ═══ 故障排查 ═══ -->
+<!-- ═══ 10. 故障排查 ═══ -->
 <section id="troubleshoot">
-  <h2><span class="no">07</span>故障排查（本项目实测过的问题）</h2>
+  <h2><span class="no">10</span>故障排查（本项目实测过的问题）</h2>
   <details class="acc"><summary><span class="err">InvalidUpdateError</span>At key 'facts': Can receive only one value per step</summary>
     <div class="abody"><b>原因：</b>多个并行工位同时写同一个状态字段，且该字段没有归并规则。
       <b>修复：</b>把 State 字段改为 <code>Annotated[list, operator.add]</code>（追加合并）。
-      若需「重写前清空」，参考 <code>written_reducer</code> 的 __RESET__ 标记模式。</div></details>
+      若需「重写前清空」，参考 <code>written_reducer</code> 的 __RESET__ 标记模式（第 20 课）。</div></details>
   <details class="acc"><summary><span class="err">网络</span>git push 报 HTTP2 framing layer / Empty reply / 连接超时</summary>
     <div class="abody"><b>原因：</b>到 github.com 的 443 端口间歇性阻断（api.github.com 可能仍通）。
       <b>修复：</b>① 多重试几次（本机实测第 3~6 次成功）；② <code>git -c http.version=HTTP/1.1 push</code>；
@@ -396,9 +503,9 @@ python3 -m pytest medrecord/tests/test_write_section.py -v   <span class="cm"># 
       <b>修复：</b>先 <code>[f.model_dump() for f in result.facts]</code> 再按 dict 使用。</div></details>
   <details class="acc"><summary><span class="err">流程不停</span>没有触发医生审核暂停</summary>
     <div class="abody"><b>排查：</b>① <code>doctor_review</code> 节点内确实调用了 <code>interrupt(...)</code>；
-      ② <code>build_main_graph</code> 传入了 checkpointer；③ 恢复时用的是同一个
-      <code>thread_id</code> 与同一个存档器。④ 恢复用 <code>Command(resume=结论)</code>。</div></details>
-  <details class="acc"><summary><span class="err">数据缺失</span>检查/检验栏目没有内容</summary>
+      ② <code>build_main_graph</code> 传入了 checkpointer；③ 恢复时用同一个
+      <code>thread_id</code> 与同一个存档器；④ 恢复用 <code>Command(resume=结论)</code>。</div></details>
+  <details class="acc"><summary><span class="err">数据缺失</span>检查/检验/概况栏目没有内容</summary>
     <div class="abody"><b>排查：</b>① 患者文件夹里对应 xlsx 是否存在（装载器对缺失文件静默跳过）；
       ② 检查所见依赖 <code>IMPRESSION</code> 列、检验所见依赖 <code>RESULT</code> 列，全空的行会被跳过；
       ③ 体温值在 <code>VITAL_SIGNS_CVALUES</code> 列，不在 VALUES 列。</div></details>
@@ -412,9 +519,9 @@ python3 -m pytest medrecord/tests/test_write_section.py -v   <span class="cm"># 
       都要验证它没有杀召回。</div></details>
 </section>
 
-<!-- ═══ 速查表 ═══ -->
+<!-- ═══ 11. 速查表 ═══ -->
 <section id="cheatsheet">
-  <h2><span class="no">08</span>命令速查表</h2>
+  <h2><span class="no">11</span>命令速查表</h2>
   <div class="table-responsive">
   <table class="tbl">
     <thead><tr><th>场景</th><th>命令（在 src/ 下，除非注明）</th></tr></thead>
@@ -436,13 +543,139 @@ python3 -m pytest medrecord/tests/test_write_section.py -v   <span class="cm"># 
 
 <footer>
   <div class="foot">
-    <div>medrecord 使用手册 · v1.0 · 2026-10 · 陈俊烨 · DrCopilot 学习项目</div>
-    <div>数据已脱敏 · 命令全部实测 · <a href="index.html">课程站点</a> · <a href="https://github.com/1739467001-svg/LangGraph-Training" rel="noopener">GitHub</a></div>
+    <div>medrecord 交互式使用教程 · v1.1 · 2026-10 · 陈俊烨 · DrCopilot 学习项目</div>
+    <div>数据已脱敏 · 示例全部来自实测 · <a href="index.html">课程站点</a> · <a href="https://github.com/1739467001-svg/LangGraph-Training" rel="noopener">GitHub</a></div>
   </div>
 </footer>
 
 <script>
-// 工作模式标签页
+/* ═══ 1. 流水线探索器 ═══ */
+const STATIONS = [
+  {id:"normalize", en:"normalize", cn:"读表与整理", what:"读取患者文件夹里的 8 张表与标准答案包，给每条记录编上「表名+行号」出处；检查所见要按 EXAM_NO 联表补项目名。",
+   din:"清洗后的数据/住院/测试患者甲/ 下的 xlsx 与 zip", dout:"orders 200 条 · exams 25 条 · labs 391 条 · vitals 199 条（甲患者实测）",
+   mech:"缺哪个文件就静默跳过对应栏目；联表失败标「未知项目」而不是编一个名字。", eg:"医嘱.xlsx 第2行：0.9%氯化钠注射液（双阀）100ml 静滴 1/8小时"},
+  {id:"privacy_gate", en:"privacy_gate", cn:"出口闸门", what:"数据发给任何模型前的安检：扫手机号、证件号、长编号、禁用姓名。两道闸——流程开头一次，每次调模型前再一次。",
+   din:"全部栏目的文本", dout:"放行，或拦截（报警单自身打码，如 138****34）",
+   mech:"命中即停，模型零调用（有计数探针测试作证）；禁用词表从脱敏映射表自动装载。", eg:"实测输出：[出口闸门①] 放行：未发现疑似身份信息"},
+  {id:"compute", en:"compute", cn:"计算器", what:"住院天数、最高体温、发热统计——算术全部由代码完成，模型一个数都不许算。",
+   din:"生命体征行（含入院/出院事件行）", dout:"derived 计算事实（甲患者 5 条：3 次住院 7/4/3 天、最高体温 36.9℃、发热统计）",
+   mech:"每条带依据（怎么算的）与出处（哪一行）；口径即常量（发热阈值 37.3℃ 只改一处）。", eg:"第1次住院天数：7 天（2099-07-01 入院 → 07-08 出院）"},
+  {id:"extract", en:"extract ×N", cn:"抽取科（并行）", what:"三种工位并行抽事实：用药→大模型（结构化输出合同）；检查所见/检验所见→代码逐字摘录（零幻觉零成本）。",
+   din:"各栏目数据（按 CHUNK_SIZE=20 切块）", dout:"facts 带出处（甲患者 37+25+389 条）",
+   mech:"用药工位受出口闸门二次检查；模型输出过 pydantic 合同校验，不合格当场报错。", eg:"模型工位药0：交货 {drug:0.9%氯化钠注射液, dose:100ml, source:医嘱.xlsx 第2行}"},
+  {id:"verify", en:"verify", cn:"逐字核对", what:"模型的话一律先当嫌疑人：出处存在 → 名称逐字在原文 → 数值等价。三步全过才进草稿。",
+   din:"facts + 原始行索引", dout:"verified / rejected（带原因留痕）",
+   mech:"fail-closed：核对没实现时全部剔除；「待医生补充」=诚实放行，表里没有模型却说有=编造剔除。", eg:"剂量 100ml vs 原文 100.0 ml → 归一化后等价，放行"},
+  {id:"write", en:"write ×栏目", cn:"书记员（并行成文）", what:"把核对过的事实写成病历语言——按栏目分批并行（token 工程），每句只能引用事实编号 F1..Fn。",
+   din:"verified + 稳定编号", dout:"written 句子（甲患者 451 句，3 工位）",
+   mech:"只能引用编号；写入前先 __RESET__ 擦黑板（自定义归并规则），保证重写不累积重复。", eg:"用药记录工位：成文 37 句"},
+  {id:"qc", en:"qc", cn:"成文质检", what:"逐句检查：每句必须有出处、必须引用真实存在的编号。不合格把意见写进提示词退回重写，最多 2 次。",
+   din:"written + 编号表", dout:"通过 / 意见清单（重写 ≤2 次后带病进审核）",
+   mech:"引用不存在的编号 = 编造的铁证；上限后不静默放行也不死循环——带病进审核交医生。", eg:"质检第1轮：451 句全部通过"},
+  {id:"review", en:"review", cn:"医生审核", what:"流程暂停（interrupt），医生看完草稿表态：批准→正式稿；驳回→归档并警示。支持跨进程「第二天批」。",
+   din:"草稿（interrupt 递给医生）", dout:"review 结论（批准/驳回）",
+   mech:"SqliteSaver 存档落盘；恢复不是重放——抽取核对不重跑，医生看到的就是暂停时那份。", eg:"[暂停] → Command(resume=批准) → 继续走完"},
+  {id:"render", en:"render", cn:"排版与评估", what:"成文句排成医生能打印的 Markdown（内部编号翻译回真实出处）+ 结构化 XML + 评估报告。",
+   din:"过审/归档的草稿", dout:"{患者}_病历草稿.md + 文书草稿.xml + 评估三指标",
+   mech:"状态即内容：驳回稿自动带「不得作为正式病历」警示；打印稿不露内部编号。", eg:"覆盖率 80% / 编造 0 / 检验自覆盖 100%"},
+];
+const pflow = document.getElementById("pflow");
+const pdetail = document.getElementById("pdetail");
+STATIONS.forEach((s, i) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "pstn" + (i === 0 ? " on" : "");
+  b.setAttribute("role", "tab");
+  b.innerHTML = s.en + '<span class="cn">' + s.cn + "</span>";
+  b.addEventListener("click", () => {
+    pflow.querySelectorAll(".pstn").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    pdetail.innerHTML =
+      "<h4>" + (i + 1) + "/9 · " + s.en + " — " + s.cn + "</h4>" +
+      "<p>" + s.what + "</p>" +
+      '<h5>输入 / 输出</h5><div class="io"><div><div class="k">输入</div><div class="v">' + s.din +
+      '</div></div><div><div class="k">输出</div><div class="v">' + s.dout + "</div></div></div>" +
+      '<div class="mech"><b>防编造机制：</b>' + s.mech + "</div>" +
+      "<h5>真实示例（测试患者甲）</h5><p style=\"font-family:var(--mono);font-size:12.3px\">" + s.eg + "</p>";
+  });
+  pflow.appendChild(b);
+});
+pflow.firstChild.click();
+
+/* ═══ 2. 一条数据的旅程 ═══ */
+const TRACE = [
+  {cap:"第 1 步 · 原始数据（医嘱表第 2 行）",
+   body:"医嘱.xlsx 第2行\n  ORDER_TEXT  = 0.9%氯化钠注射液（双阀）\n  DOSAGE      = 100.0\n  DOSAGE_UNITS= ml\n  ADMINISTRATION = 静滴\n  FREQUENCY   = 1/8小时\n  医嘱号      = 40",
+   note:"读表节点给每行编上「表名+行号」——<b>出处从数据进系统的第一刻就存在</b>，不是事后补的。"},
+  {cap:"第 2 步 · 资料员抽取（大模型工位）",
+   body:'模型收到（节选）：\n"第2行 医嘱号40：0.9%氯化钠注射液（双阀） 100.0 ml 静滴 1/8小时"\n\n模型交货（通过 pydantic 合同）：\n{ "drug": "0.9%氯化钠注射液（双阀）",\n  "dose": "100 ml", "route": "静滴",\n  "freq": "1/8小时",\n  "source": "医嘱.xlsx 第2行 医嘱号40" }',
+   note:"提示词铁律：只用原文、逐字照抄、没依据填【待医生补充】、不下诊断。<b>出处是合同必填字段</b>。"},
+  {cap:"第 3 步 · 逐字核对（代码，不是模型）",
+   body:"① 出处存在？   医嘱表第2行 → ✓\n② 药名在原文？ \"0.9%氯化钠注射液\" ∈ 原文 → ✓\n③ 剂量数值等价？ \"100ml\" ≡ \"100.0ml\"（归一化） → ✓\n\n三步全过 → 进入 verified（核对通过池）",
+   note:"任何一步不过 → 剔除并记录原因，<b>留痕不删除</b>。核对是代码做的——算术和核对交给代码，不靠心算。"},
+  {cap:"第 4 步 · 编号入池",
+   body:"F1 ← 0.9%氯化钠注射液（双阀）\nF2 ← 注射用哌拉西林钠\n…\nF451 ← 氯化钾注射液",
+   note:"全部核对通过的事实获得<b>稳定编号 F1..Fn</b>。书记员只能引用这些编号——引用不存在的编号就是编造的铁证。"},
+  {cap:"第 5 步 · 书记员成句（按栏目分批）",
+   body:'书记员收到：[{ "id": "F1", "section": "用药记录", … }]\n\n书记员交货：\n{ "text": "0.9%氯化钠注射液（双阀） 100 ml，静滴，频次1/8小时。",\n  "sources": ["F1"] }',
+   note:"只能用列出的事实，<b>不能增加任何新内容</b>。质检会逐句验证：sources 里出现 F9999 这类不存在的编号 = 编造，当场打回。"},
+  {cap:"第 6 步 · 打印稿（医生看到的）",
+   body:"## 用药记录\n- 0.9%氯化钠注射液（双阀） 100 ml，静滴，频次1/8小时。\n  （出处：医嘱.xlsx 第2行 医嘱号40）",
+   note:"内部编号 F1 在打印稿里被<b>翻译回真实出处</b>——医生看到的是能回查的东西。医生审核通过后，这行才算正式内容。"},
+];
+let tIdx = 0;
+const tsteps = document.getElementById("tsteps");
+const tstage = document.getElementById("tstage");
+TRACE.forEach((t, i) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "tbtn" + (i === 0 ? " on" : "");
+  b.textContent = t.cap.replace("第 ", "").replace(/ ·.*/, "").replace(/^第(\d+)步$/, "$1");
+  b.textContent = "步骤 " + (i + 1);
+  b.setAttribute("role", "tab");
+  b.addEventListener("click", () => showTrace(i));
+  tsteps.appendChild(b);
+});
+function showTrace(i) {
+  tIdx = Math.max(0, Math.min(TRACE.length - 1, i));
+  tsteps.querySelectorAll(".tbtn").forEach((x, j) => x.classList.toggle("on", j === tIdx));
+  const t = TRACE[tIdx];
+  tstage.innerHTML = '<div class="cap">' + t.cap + '</div><div class="body">' + t.body.replace(/&/g,"&amp;").replace(/</g,"&lt;") +
+    '</div><div class="note">' + t.note + "</div>";
+  document.getElementById("tprev").disabled = tIdx === 0;
+  document.getElementById("tnext").disabled = tIdx === TRACE.length - 1;
+  document.getElementById("tpos").textContent = (tIdx + 1) + " / " + TRACE.length;
+}
+document.getElementById("tprev").addEventListener("click", () => showTrace(tIdx - 1));
+document.getElementById("tnext").addEventListener("click", () => showTrace(tIdx + 1));
+showTrace(0);
+
+/* ═══ 4. 防编造实验 ═══ */
+const labInput = document.getElementById("labval");
+const verdict = document.getElementById("lab-verdict");
+const TRUE_VALUE = "10.8";
+function checkLab() {
+  const v = labInput.value.trim();
+  const checks = [
+    ["出处存在？ 检验结果.xlsx 第2行 → ✓", true],
+    ["项目名在原文？ 谷丙转氨酶 → ✓", true],
+    ["结果值逐字比对：『" + (v || "(空)") + "』 vs 原文『" + TRUE_VALUE + "』", v === TRUE_VALUE],
+  ];
+  const passed = checks[2][1];
+  const rows = checks.map(c =>
+    '<div class="' + (c[1] ? "ok" : "no") + '">' + (c[1] ? "✓" : "✗") + " " + c[0] + "</div>").join("");
+  verdict.className = "verdict " + (passed ? "pass" : "fail");
+  verdict.innerHTML = passed
+    ? '<div class="vh">✓ 核对通过——进入草稿</div><div class="check">' + rows + "</div>" +
+      "<p>三步全过。这句将出现在打印稿：谷丙转氨酶 " + v + " U/L（出处：检验结果.xlsx 第2行 检验号26052068664）。</p>"
+    : '<div class="vh">✗ 核对拦截——剔除，不进入草稿</div><div class="check">' + rows + "</div>" +
+      "<p>剔除原因：<b>结果值与原文不符：原文『" + TRUE_VALUE + "』</b>。评估报告「编造」+1，" +
+      "剔除记录留给医生。检验值错一位是人命关天的事——这就是闸门存在的意义。</p>";
+}
+document.getElementById("lab-ok").addEventListener("click", () => { labInput.value = TRUE_VALUE; checkLab(); });
+document.getElementById("lab-bad").addEventListener("click", () => { labInput.value = "110.8"; checkLab(); });
+document.getElementById("lab-reset").addEventListener("click", () => { labInput.value = TRUE_VALUE; verdict.className = "verdict"; });
+labInput.addEventListener("input", checkLab);
+
+/* ═══ 7. 工作模式标签页 ═══ */
 document.querySelectorAll(".modes button").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".modes button").forEach(b => {
@@ -453,7 +686,7 @@ document.querySelectorAll(".modes button").forEach(btn => {
     document.getElementById(btn.dataset.m).hidden = false;
   });
 });
-// 代码复制
+/* ═══ 复制按钮 ═══ */
 document.querySelectorAll("pre").forEach(pre => {
   const btn = document.createElement("button");
   btn.className = "copybtn"; btn.type = "button"; btn.textContent = "复制";
