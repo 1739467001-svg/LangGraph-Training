@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>参考手册 · 术语表 / FAQ / 变更日志 / 安全合规</title>
+<meta name="description" content="medrecord 参考手册：LangGraph 术语表、常见问题解答、课程变更日志与数据安全合规分级。">
+<style>
+  :root{
+    --bg:#f6f8fa; --surface:#ffffff; --ink:#1a2332; --ink-2:#5a6a7e; --ink-3:#8895a7;
+    --line:#e3e8ee; --brand:#0e6e5c; --brand-2:#0a5446; --brand-soft:#e7f3f0;
+    --accent:#1f5eff; --warn:#b45309; --warn-soft:#fef3e2; --danger:#c0392b; --danger-soft:#fdecea;
+    --code-bg:#0f1720; --code-ink:#d7e2ee; --radius:10px;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.65;font-size:15px}
+  a{color:var(--brand);text-decoration:none}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+  header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);
+         border-bottom:1px solid var(--line)}
+  .topbar{display:flex;align-items:center;gap:14px;padding:10px 20px;max-width:1120px;margin:0 auto;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;color:var(--brand-2)}
+  .logo .mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+              color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700}
+  .topnav{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+  .topnav a{padding:5px 11px;border-radius:7px;font-size:13.5px;color:var(--ink-2)}
+  .topnav a:hover{background:var(--brand-soft);color:var(--brand-2)}
+  .topnav a.here{background:var(--brand);color:#fff}
+
+  .hero{background:linear-gradient(160deg,#0c3f36 0%,#0e6e5c 55%,#128a73 100%);color:#fff;padding:42px 0 34px}
+  .kicker{display:inline-block;font-size:12.5px;letter-spacing:.14em;background:rgba(255,255,255,.14);
+          border:1px solid rgba(255,255,255,.25);padding:4px 12px;border-radius:999px;margin-bottom:14px}
+  .hero h1{font-size:29px;font-weight:700}
+  .hero p.sub{margin-top:10px;font-size:15.5px;opacity:.92;max-width:800px}
+
+  section{padding:38px 0 6px}
+  h2{font-size:22px;font-weight:700;margin-bottom:6px}
+  h2 .no{color:var(--brand);margin-right:8px;font-family:var(--mono);font-size:15px}
+  .sec-sub{color:var(--ink-2);font-size:14px;margin-bottom:18px}
+  h3{font-size:16px;font-weight:700;margin:20px 0 10px}
+
+  .searchbox{width:100%;max-width:460px;border:1px solid var(--line);border-radius:999px;
+             padding:8px 18px;font-size:13.5px;font-family:inherit;outline:none;
+             background:var(--surface);color:var(--ink);display:block;margin-bottom:14px}
+  .searchbox:focus{border-color:var(--brand)}
+
+  .term{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+        padding:13px 17px;margin-bottom:9px}
+  .term h4{font-size:14px;font-weight:700;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+  .term h4 .en{font-family:var(--mono);font-size:12px;color:var(--brand);font-weight:400}
+  .term h4 .cat{margin-left:auto;font-size:11px;color:var(--ink-3)}
+  .term p{font-size:13.5px;color:var(--ink-2);margin-top:3px}
+  .term p b{color:var(--ink)}
+
+  details.faq{background:var(--surface);border:1px solid var(--line);border-radius:9px;margin-bottom:9px;overflow:hidden}
+  details.faq summary{list-style:none;cursor:pointer;padding:13px 17px;font-size:14px;font-weight:700}
+  details.faq summary::-webkit-details-marker{display:none}
+  details.faq summary::before{content:"Q";font-family:var(--mono);color:var(--brand);margin-right:10px;font-weight:700}
+  details.faq summary:hover{background:#fbfcfd}
+  details.faq .a{border-top:1px solid var(--line);padding:13px 17px;font-size:13.5px;color:var(--ink-2)}
+  details.faq .a b{color:var(--ink)}
+  details.faq .a .ref{display:inline-block;margin-top:8px;font-size:12.5px;color:var(--brand-2);
+                      background:var(--brand-soft);border-radius:6px;padding:2px 10px}
+
+  .log{position:relative;padding-left:22px}
+  .log::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--line)}
+  .log .entry{position:relative;padding:8px 0 14px}
+  .log .entry::before{content:"";position:absolute;left:-21px;top:15px;width:10px;height:10px;
+                      border-radius:50%;background:var(--brand);border:2px solid var(--surface)}
+  .log .date{font-family:var(--mono);font-size:12px;color:var(--brand);font-weight:700}
+  .log .ver{font-weight:700;font-size:14px;margin:2px 0 4px}
+  .log ul{list-style:none;margin-top:2px}
+  .log li{font-size:13px;color:var(--ink-2);padding:2px 0 2px 14px;position:relative}
+  .log li::before{content:"";position:absolute;left:0;top:10px;width:5px;height:5px;border-radius:50%;background:var(--ink-3)}
+
+  .tbl{width:100%;border-collapse:collapse;background:var(--surface);border-radius:var(--radius);
+       overflow:hidden;border:1px solid var(--line);font-size:13.5px}
+  .tbl th{background:#f0f3f6;text-align:left;padding:9px 12px;font-weight:700;font-size:12.5px;color:var(--ink-2)}
+  .tbl td{padding:9px 12px;border-top:1px solid var(--line);vertical-align:top}
+  .pill{display:inline-block;font-size:11.5px;border-radius:999px;padding:1px 10px;font-weight:700}
+  .pill.red{background:var(--danger-soft);color:var(--danger)}
+  .pill.yel{background:var(--warn-soft);color:var(--warn)}
+  .pill.grn{background:var(--brand-soft);color:var(--brand-2)}
+
+  .links{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  .links .card h4 a{color:var(--brand-2)}
+  .links .card p{margin-top:4px}
+
+  footer{margin-top:56px;border-top:1px solid var(--line);background:var(--surface)}
+  .foot{max-width:1120px;margin:0 auto;padding:26px 20px;font-size:12.5px;color:var(--ink-3);
+        display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between}
+
+  @media print{
+    header,.topnav,.searchbox,footer{display:none!important}
+    body{background:#fff;font-size:12.5px}
+    section{padding:10px 0}
+    .term,details.faq,.log .entry{break-inside:avoid}
+    a{color:inherit;text-decoration:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="topbar">
+    <div class="logo"><span class="mark">Dr</span>medrecord 参考手册</div>
+    <nav class="topnav">
+      <a href="index.html">课程站点</a>
+      <a href="usage.html">使用教程</a>
+      <a class="here" href="reference.html">参考手册</a>
+      <a href="https://github.com/1739467001-svg/LangGraph-Training" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <span class="kicker">官方参考手册 · v1.0</span>
+    <h1>术语表 · 常见问题 · 变更日志 · 安全合规</h1>
+    <p class="sub">课程站负责「学」，使用教程负责「做」，本页负责「查」——所有术语定义、
+       常见疑问的准确回答、逐课变更记录，以及数据的分级与去向。</p>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ═══ 术语表 ═══ -->
+<section id="glossary">
+  <h2><span class="no">01</span>术语表</h2>
+  <p class="sec-sub">全部术语与项目代码一一对应（括号内为实现位置）。输入关键词筛选。</p>
+  <input class="searchbox" id="term-search" type="search" placeholder="筛选术语：reducer、闸门、书记员…" aria-label="筛选术语">
+  <div id="term-list"></div>
+  <p id="term-empty" style="display:none;color:var(--ink-3);font-size:13.5px">没有匹配的术语。</p>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section id="faq">
+  <h2><span class="no">02</span>常见问题（FAQ）</h2>
+  <p class="sec-sub">每条回答都以项目实测数据或代码为依据，并标注出处。</p>
+
+  <details class="faq"><summary>覆盖率为什么不是 100%？是不是模型不行？</summary>
+    <div class="a">缺口集中在<b>吸入用七氟烷（5/5 位患者）与罗哌卡因（4/5）</b>——这两类是麻醉用药，
+      由麻醉医生术中给药，<b>不走普通医嘱表</b>。这是数据源缺口，不是模型问题；对策是接入手术/麻醉记录。
+      另外标准答案（医生写的用药记录）只覆盖特殊用药，普通溶媒本就不在对照范围。
+      <span class="ref">出处：批量验收报告 · 第 8 课</span></div></details>
+
+  <details class="faq"><summary>为什么现在用的是「规则基线」而不是真的大模型？</summary>
+    <div class="a">两个原因：① 数据外发需要医院的显式批准（批准闸门未开时，系统物理上只会使用规则基线）；
+      ② ML 工程的标准打法——先用确定性基线把整条流水线与评估框架跑通，真模型获批后经
+      「模型工厂」切换（改环境变量即可），并用同一套指标做 A/B 对比。
+      <span class="ref">出处：第 12 课 · tech-spec 6.1</span></div></details>
+
+  <details class="faq"><summary>AI 生成的病历能直接用吗？</summary>
+    <div class="a"><b>永远不能直接用。</b>AI 产出的永远是「草稿」：每句带出处供医生回查；
+      流程在医生审核站强制暂停（interrupt），医生批准前状态为「未过审」且打印稿带警示语；
+      驳回的稿子归档并标注「不得作为正式病历内容使用」。只有医生确认后的定稿才能进入医院系统。
+      <span class="ref">出处：第 6/14 课 · 病历生命周期</span></div></details>
+
+  <details class="faq"><summary>「编造 0 条」是怎么保证的？</summary>
+    <div class="a">三步逐字核对（出处存在 → 名称在原文 → 数值等价）+ fail-closed（没验证过的不能出口）
+      + 质检编号校验（书记员引用不存在的编号即编造，当场拦截）。更关键的是这整套机制被
+      「说谎模型/说谎书记员」注入测试反复攻击过——<b>0 不是运气，是可证明的性质</b>。
+      <span class="ref">出处：第 4/11/18 课测试</span></div></details>
+
+  <details class="faq"><summary>为什么检查所见、检验所见不用大模型？</summary>
+    <div class="a">因为医生的结论已经写在表里了——「抽取」等于逐字复制带出处，用确定性代码即可：
+      零幻觉、零成本、自覆盖率 100%。<b>先问「这个栏目需要模型的什么能力」，再决定上不上模型</b>。
+      只有用药记录这种需要从非结构化文本理解抽取的栏目才用模型。
+      <span class="ref">出处：第 13 课</span></div></details>
+
+  <details class="faq"><summary>需要训练或微调模型吗？</summary>
+    <div class="a"><b>不需要。</b>项目路线是「现成大模型 + LangGraph 编排 + 工程化，不训练任何模型」。
+      防编造靠机制（核对/质检/审核），不靠把知识训进模型（决策记录 D-5）。
+      <span class="ref">出处：tech-spec 设计原则 · 决策记录</span></div></details>
+
+  <details class="faq"><summary>和「把数据一次性丢给模型写报告」的做法有什么区别？</summary>
+    <div class="a">一次性做法有三个问题：记录一长模型就漏写或张冠李戴；写出来的话说不清哪句来自哪条记录；
+      出错无法定位是哪一步。拆成九站后<b>每一步有输入、有输出、能检查</b>；
+      一次性做法正好作为基线 V0，用同一套指标对比拆分后的收益。
+      <span class="ref">出处：tech-spec 3.3</span></div></details>
+
+  <details class="faq"><summary>数据安全怎么保证？脱敏的效果怎么验证？</summary>
+    <div class="a">五层：① 源头脱敏（两遍扫描+模式兜底）；② 反向校验（真实姓名/住院号/电话/住址 0 残留）
+      + 完整性核对（行列数不变）；③ 出口闸门（每次调模型前扫描，命中即停，模型零调用）；
+      ④ 铁律（原始数据/映射表永不入库，追踪强制关闭，key 只在环境变量）；
+      ⑤ 推送前姓名/住院号反向扫描是固定工序（本站发布实测 0 命中）。
+      <span class="ref">出处：第 0/16 课 · 安全设计</span></div></details>
+
+  <details class="faq"><summary>遇到 bug 或数字不对，怎么办？</summary>
+    <div class="a">标准闭环：<b>评估 → 追查 → 修复 → 复测</b>。先跑 61 项测试定位层级（纯函数/闸门/整机）；
+      再带着具体数字追查（例：覆盖率 0% → 回表格查 → 发现截断上限杀召回 → 修复 → 复测 33%）。
+      使用教程第 10 节收录了 8 个本项目实测过的问题。
+      <span class="ref">出处：第 8/20 课 · 使用教程第 10 节</span></div></details>
+</section>
+
+<!-- ═══ 变更日志 ═══ -->
+<section id="changelog">
+  <h2><span class="no">03</span>变更日志（课程与系统里程碑）</h2>
+  <p class="sec-sub">按课程推进的记录；每一条都对应可运行的代码与测试，详见 LEARNING.md。</p>
+  <div class="log">
+    <div class="entry"><div class="date">2026-10-04</div><div class="ver">v1.2 · 成文分批 + 排版输出 + 参考手册</div>
+      <ul><li>第 20 课：书记员按栏目分批并行（token 工程），written_reducer 自定义归并（RESET 防累积）</li>
+          <li>第 21 课：render 排版输出——九站点全部落地；打印稿真实出处、状态横幅</li>
+          <li>课程站点 v1.0 与使用手册上线；本参考手册发布；GitHub Pages 部署</li></ul></div>
+    <div class="entry"><div class="date">2026-10-04</div><div class="ver">v1.1 · 检验工位 + 成文节点 + 计算器</div>
+      <ul><li>第 17 课：检验所见工位（先测试后实现；结果值篡改拦截）</li>
+          <li>第 18 课：书记员成文节点（事实编号 F1..Fn、带意见重写、说谎书记员演习）</li>
+          <li>第 19 课：计算器节点（住院天数/最高体温/发热统计，纯函数+节点分离）</li></ul></div>
+    <div class="entry"><div class="date">2026-10-03</div><div class="ver">v1.0 · 工程化 + 治理 + 出口闸门</div>
+      <ul><li>第 9~12 课：子图模块化（回归验证）、SqliteSaver 跨进程审核、消防演习测试、模型工厂与批准闸门</li>
+          <li>第 13~14 课：多栏目生产线（3 工位）、批量验收与治理规则（自动化评估≠自动化批准）</li>
+          <li>第 15~16 课：移植对齐（对照真实仓库）、出口闸门（两道安检）</li></ul></div>
+    <div class="entry"><div class="date">2026-10-01 ~ 10-02</div><div class="ver">v0.x · 地基与正篇</div>
+      <ul><li>第 0 课：数据脱敏（两遍扫描+模式兜底+反向校验，5 患者脱敏副本）</li>
+          <li>第 1~8 课：三件套、条件循环、LangChain 合同、逐字核对、Send 并行、
+              interrupt 审核、总图与三指标评估、五患者毕业运行</li></ul></div>
+  </div>
+</section>
+
+<!-- ═══ 安全合规 ═══ -->
+<section id="security">
+  <h2><span class="no">04</span>安全与合规：数据分级与去向</h2>
+  <p class="sec-sub">依据项目 compliance 框架与第 0/16 课实践。任何新的数据用途，先在这里登记分级再动手。</p>
+  <div class="table-responsive">
+  <table class="tbl">
+    <thead><tr><th>数据分级</th><th>内容</th><th>存放位置</th><th>允许去向</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill red">原始数据</span></td><td>病历资料/（真实姓名文件夹、原始表格与文书）</td>
+          <td>本地项目外受控目录</td><td>仅本地脱敏工序读取</td><td class="pill red">禁止入库/上传</td></tr>
+      <tr><td><span class="pill yel">脱敏数据</span></td><td>清洗后的数据/（测试患者甲~戊）</td>
+          <td>本地（git 忽略）</td><td>流水线输入；发外部模型需批准环境变量</td><td class="pill yel">禁止入库</td></tr>
+      <tr><td><span class="pill yel">代号对照表</span></td><td>deid_tools/mapping_真实值勿提交.json</td>
+          <td>本地（git 忽略）</td><td>出口闸门禁用词表自动装载；核对后可删除</td><td class="pill red">禁止入库/外发</td></tr>
+      <tr><td><span class="pill yel">生成结果</span></td><td>outputs/ 草稿·打印稿·评估·审核存档</td>
+          <td>本地（git 忽略）</td><td>医生审核；批量稿一律归档</td><td class="pill yel">禁止入库</td></tr>
+      <tr><td><span class="pill grn">代码与文档</span></td><td>src/ · docs/ · site/ · LEARNING.md</td>
+          <td>git 仓库（公开）</td><td>推送前姓名/住院号反向扫描（实测 0 命中）</td><td class="pill grn">可入库</td></tr>
+      <tr><td><span class="pill grn">虚构样例</span></td><td>测试患者甲~戊的标识体系（FAKE0001~0005）</td>
+          <td>git 仓库</td><td>教学与演示</td><td class="pill grn">可入库</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>闸门与纪律清单</h3>
+  <div class="table-responsive">
+  <table class="tbl">
+    <thead><tr><th>机制</th><th>防的是什么</th><th>实现与测试</th></tr></thead>
+    <tbody>
+      <tr><td>出口闸门（两道）</td><td>身份信息被发给外部模型</td><td>流程开头 + 每次调模型前扫描；命中即停、模型零调用、报警打码（privacy_gate.py）</td></tr>
+      <tr><td>批准闸门</td><td>未经批准的数据外发</td><td>DRCOPILOT_DATA_APPROVED=1 之前工厂只返回基线（models.py，测试锁死）</td></tr>
+      <tr><td>逐字核对 + fail-closed</td><td>编造内容进入草稿</td><td>三步核对 + 全剔默认（extraction.py）</td></tr>
+      <tr><td>追踪关闭</td><td>运行数据被传到 LangSmith 云端</td><td>4 个追踪环境变量在代码最前写死 false（每份脚本头部）</td></tr>
+      <tr><td>治理规则</td><td>AI 草稿被当成正式记录</td><td>批量稿一律驳回归档；打印稿状态横幅（batch.py / render_node）</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ═══ 相关页面 ═══ -->
+<section id="links">
+  <h2><span class="no">05</span>文档导航</h2>
+  <div class="links">
+    <div class="card"><h4><a href="index.html">课程站点 →</a></h4>
+      <p>22 节课学习内容：路线、架构、设计原则、逐课详解（可搜索）、评估验收。</p></div>
+    <div class="card"><h4><a href="usage.html">交互式使用教程 →</a></h4>
+      <p>流水线探索器、一条数据的旅程、终端实况、防编造实验、四种工作模式、故障排查。</p></div>
+    <div class="card"><h4><a href="https://github.com/1739467001-svg/LangGraph-Training" rel="noopener">GitHub 仓库 →</a></h4>
+      <p>全部源码（medrecord 包 + 教学脚本 + 61 项测试）、LEARNING.md 完整账本、本站点源文件。</p></div>
+    <div class="card"><h4>LEARNING.md →</h4>
+      <p>逐课账本：概念要点、比喻、代码位置与 40+ 个坑的原始记录（仓库根目录）。</p></div>
+  </div>
+</section>
+
+</div><!-- /wrap -->
+
+<footer>
+  <div class="foot">
+    <div>medrecord 参考手册 · v1.0 · 2026-10 · 陈俊烨 · DrCopilot 学习项目</div>
+    <div>数据已脱敏 · <a href="index.html">课程站点</a> · <a href="usage.html">使用教程</a> · <a href="https://github.com/1739467001-svg/LangGraph-Training" rel="noopener">GitHub</a></div>
+  </div>
+</footer>
+
+<script>
+const TERMS = [
+  {t:"State（资料袋）", en:"TypedDict", cat:"LangGraph",
+   d:"全流程共享的状态。节点只返回<b>要更新的字段</b>，LangGraph 负责合并回袋子——像往病历夹里塞一张新单子，而不是重抄整个夹子。", ref:"第 1 课 · state.py"},
+  {t:"Node（节点 / 科室）", en:"function + add_node", cat:"LangGraph",
+   d:"普通函数挂上图。每个节点只做一件事：读表、抽取、核对、成文、审核、排版。", ref:"第 1 课 · graph.py"},
+  {t:"Edge（边）与条件边", en:"add_edge / add_conditional_edges", cat:"LangGraph",
+   d:"固定箭头 vs 「护士站」：条件边的路由函数读状态、<b>返回下一站名字</b>，去哪由袋子里的内容实时决定。", ref:"第 2 课"},
+  {t:"reducer（归并规则）", en:"Annotated[list, fn]", cat:"LangGraph",
+   d:"并行工位同时写同一字段时的「叠放规则」。<code>operator.add</code> 追加；自定义 <code>written_reducer</code> 支持 __RESET__ 擦黑板（重写不累积）。没有它：InvalidUpdateError。", ref:"第 5/20 课"},
+  {t:"Send（动态并行）", en:"langgraph.types.Send", cat:"LangGraph",
+   d:"条件边返回一串 Send(节点名, 子状态) → 按数据量动态开工位。支持多态分发：一个列表派出模型工位和代码工位。", ref:"第 5/13/20 课"},
+  {t:"interrupt / Command（人工审核）", en:"langgraph.types", cat:"LangGraph",
+   d:"节点内 interrupt(材料) 让整图暂停；审核人表态后 Command(resume=意见) 从暂停点继续，interrupt() 的返回值就是它。恢复不是重放。", ref:"第 6 课"},
+  {t:"checkpointer（检查点 / 存档）", en:"InMemorySaver / SqliteSaver", cat:"LangGraph",
+   d:"每个超级步后把状态存档，按 thread_id 隔离。内存版进程退出即失忆；SQLite 版支持跨进程「医生第二天批」。", ref:"第 10 课"},
+  {t:"资料员 / 书记员", en:"extract / write", cat:"角色",
+   d:"两个大模型角色：资料员从原文<b>抽事实</b>（带出处），书记员把<b>核对过的事实</b>写成病历语言（带编号）。中间隔着代码逐字核对——先抽取、后成文。", ref:"第 3/18 课"},
+  {t:"事实编号 F1..Fn", en:"assign_fact_ids", cat:"防编造",
+   d:"核对通过的事实的稳定编号。书记员只能引用编号；引用不存在的编号 = 编造的铁证，质检当场拦截。", ref:"第 18 课 · writer.py"},
+  {t:"逐字核对", en:"verify", cat:"防编造",
+   d:"三步：出处存在 → 名称逐字在原文 → 数值等价（100 ≡ 100.0 归一化）。fail-closed：核对没实现时全部剔除。", ref:"第 4 课"},
+  {t:"计算事实", en:"compute", cat:"防编造",
+   d:"代码算出的事实（住院天数/最高体温/发热统计），每条带依据与出处。算术交给代码，模型一个数都不许算。", ref:"第 19 课"},
+  {t:"出口闸门", en:"privacy_gate", cat:"安全",
+   d:"两道安检：流程开头 + 每次调模型前。扫手机号/证件号/长编号/禁用姓名；命中即停、模型零调用；报警单自身打码。", ref:"第 16 课"},
+  {t:"批准闸门", en:"DRCOPILOT_DATA_APPROVED", cat:"安全",
+   d:"数据外发的显式批准 = 环境变量。未设 1 时模型工厂物理上只返回基线——代码不认识聊天记录。", ref:"第 12 课"},
+  {t:"三指标", en:"coverage / extra / fabrication", cat:"评估",
+   d:"覆盖率（命中标准答案种数÷种数）、多报（草稿有答案没有，交医生判断）、编造（核对剔除数）。汇报时覆盖率必须连同未覆盖原因。", ref:"第 7/14 课"},
+  {t:"fail-closed", en:"fail-closed", cat:"思维",
+   d:"没验证过的内容不能出口。核对没实现时全部剔除；宁可草稿为空，不可让未核对的话混进病历。", ref:"第 4 课"},
+  {t:"治理规则", en:"governance", cat:"思维",
+   d:"自动化评估 ≠ 自动化批准：批量稿一律驳回归档；批准永远是医生的显式动作。有测试断言锁住。", ref:"第 14 课"},
+  {t:"回归验证", en:"regression", cat:"思维",
+   d:"重构只许动结构不许动行为——旧输出是行为规格（第 9 课重构后数字一字不差）。", ref:"第 9 课"},
+  {t:"证据时间线", en:"evidence timeline", cat:"真实仓库",
+   d:"真实仓库的统一证据模型：录音/检验/检查/医嘱全部整理成带编号的 events。medrecord 按表读取是简化版，移植时做抽象。", ref:"tech-spec 3.5"},
+];
+const tl = document.getElementById("term-list");
+const tEmpty = document.getElementById("term-empty");
+TERMS.forEach(t => {
+  const d = document.createElement("div");
+  d.className = "term"; d.dataset.kw = (t.t + t.en + t.cat + t.d).toLowerCase();
+  d.innerHTML = "<h4><span>" + t.t + '</span><span class="en">' + t.en + '</span><span class="cat">' + t.cat + "</span></h4>" +
+    "<p>" + t.d + '</p><p style="margin-top:5px;font-size:12px;color:var(--brand)">📖 ' + t.ref + "</p>";
+  tl.appendChild(d);
+});
+document.getElementById("term-search").addEventListener("input", e => {
+  const kw = e.target.value.trim().toLowerCase();
+  let shown = 0;
+  tl.querySelectorAll(".term").forEach(el => {
+    const on = !kw || el.dataset.kw.includes(kw);
+    el.style.display = on ? "" : "none";
+    if (on) shown++;
+  });
+  document.getElementById("term-empty").style.display = shown ? "none" : "block";
+});
+</script>
+</body>
+</html>
