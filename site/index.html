@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LangChain / LangGraph 病历智能体实战 · 课程站点</title>
+<meta name="description" content="22 节课从零搭建病历文书生成流水线：脱敏 → 编排 → 防编造 → 评估，全部数据已脱敏，61 项自动化测试。">
+<style>
+  :root{
+    --bg:#f6f8fa; --surface:#ffffff; --ink:#1a2332; --ink-2:#5a6a7e; --ink-3:#8895a7;
+    --line:#e3e8ee; --brand:#0e6e5c; --brand-2:#0a5446; --brand-soft:#e7f3f0;
+    --accent:#1f5eff; --warn:#b45309; --warn-soft:#fef3e2; --danger:#c0392b;
+    --code-bg:#0f1720; --code-ink:#d7e2ee; --radius:10px;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.65;font-size:15px}
+  a{color:var(--brand);text-decoration:none}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+  /* ── 顶栏 ── */
+  header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
+         border-bottom:1px solid var(--line)}
+  .topbar{display:flex;align-items:center;gap:14px;padding:10px 20px;max-width:1120px;margin:0 auto}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;color:var(--brand-2)}
+  .logo .mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+              color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700}
+  .topnav{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+  .topnav a{padding:5px 11px;border-radius:7px;font-size:13.5px;color:var(--ink-2)}
+  .topnav a:hover{background:var(--brand-soft);color:var(--brand-2)}
+
+  /* ── Hero ── */
+  .hero{background:linear-gradient(160deg,#0c3f36 0%,#0e6e5c 55%,#128a73 100%);color:#fff;padding:56px 0 44px}
+  .hero .wrap{max-width:1120px}
+  .kicker{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;letter-spacing:.14em;
+          background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+          padding:4px 12px;border-radius:999px;margin-bottom:16px}
+  .hero h1{font-size:34px;line-height:1.25;font-weight:700;letter-spacing:.01em}
+  .hero p.sub{margin-top:12px;font-size:16px;opacity:.92;max-width:760px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:28px}
+  .stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:var(--radius);padding:14px 16px}
+  .stat b{display:block;font-size:26px;font-weight:700}
+  .stat span{font-size:12.5px;opacity:.85}
+  .hero .meta{margin-top:22px;font-size:12.5px;opacity:.8}
+
+  /* ── 区块 ── */
+  section{padding:44px 0 8px}
+  h2{font-size:23px;font-weight:700;margin-bottom:6px}
+  h2 .no{color:var(--brand);margin-right:8px;font-family:var(--mono);font-size:16px}
+  .sec-sub{color:var(--ink-2);font-size:14px;margin-bottom:20px}
+  h3{font-size:16.5px;font-weight:700;margin:22px 0 10px}
+
+  /* ── 架构流程 ── */
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:16px 0 6px}
+  .stn{flex:1 1 108px;background:var(--surface);border:1px solid var(--line);border-radius:9px;
+       padding:10px 10px;text-align:center;min-width:104px;position:relative}
+  .stn .nm{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--brand-2);word-break:break-all}
+  .stn .ds{font-size:11.5px;color:var(--ink-2);margin-top:3px;line-height:1.4}
+  .stn .badge{position:absolute;top:-8px;right:-6px;font-size:10px;background:var(--accent);color:#fff;
+              border-radius:999px;padding:1px 7px}
+  .arrow{align-self:center;color:var(--ink-3);font-size:16px;padding:0 2px}
+  .flow-note{font-size:12.5px;color:var(--ink-2);margin-top:8px}
+
+  /* ── 原则卡 ── */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+  .pcard h4{font-size:14.5px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .pcard h4 .ico{width:22px;height:22px;border-radius:6px;background:var(--brand-soft);color:var(--brand-2);
+                 display:grid;place-items:center;font-size:12px;flex:none}
+  .pcard p{font-size:13.5px;color:var(--ink-2)}
+
+  /* ── 课程 ── */
+  .filters{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
+  .filters button{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);
+                  border-radius:999px;padding:5px 14px;font-size:13px;cursor:pointer;font-family:inherit}
+  .filters button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  #search{flex:1 1 220px;min-width:200px;border:1px solid var(--line);border-radius:999px;
+          padding:6px 16px;font-size:13.5px;font-family:inherit;background:var(--surface);color:var(--ink);outline:none}
+  #search:focus{border-color:var(--brand)}
+  .lesson{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+          margin-bottom:12px;overflow:hidden}
+  .lesson > summary{list-style:none;cursor:pointer;padding:14px 18px;display:flex;align-items:center;gap:12px}
+  .lesson > summary::-webkit-details-marker{display:none}
+  .lesson > summary:hover{background:#fbfcfd}
+  .lno{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--brand);flex:none;width:44px}
+  .ltt{font-weight:700;font-size:14.5px;flex:1}
+  .ltag{font-size:11px;padding:2px 9px;border-radius:999px;flex:none}
+  .ltag.地基{background:#eef4fb;color:#2b5cad}.ltag.正篇{background:var(--brand-soft);color:var(--brand-2)}
+  .ltag.进阶{background:#f3effb;color:#6b3fb8}.ltag.结业{background:#fdf0ec;color:#b05a2c}
+  .ltag.毕业{background:#fef3e2;color:var(--warn)}
+  .lbody{border-top:1px solid var(--line);padding:16px 18px 18px;display:grid;gap:14px}
+  .lgoal{font-size:14px;color:var(--ink)}
+  .lsec h5{font-size:12px;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px}
+  .lsec ul{list-style:none}
+  .lsec li{font-size:13.5px;color:var(--ink-2);padding:3px 0 3px 16px;position:relative}
+  .lsec li::before{content:"";position:absolute;left:2px;top:11px;width:6px;height:6px;border-radius:50%;background:var(--brand)}
+  .lsec li.warn::before{background:var(--warn)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:720px){.cols{grid-template-columns:1fr}}
+  code{font-family:var(--mono);font-size:12.5px;background:var(--brand-soft);color:var(--brand-2);
+       padding:1px 6px;border-radius:5px;word-break:break-all}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:9px;padding:14px 16px;
+      overflow-x:auto;font-size:12.5px;line-height:1.6;font-family:var(--mono)}
+  pre code{background:none;color:inherit;padding:0}
+
+  /* ── 评估表 ── */
+  .tbl{width:100%;border-collapse:collapse;background:var(--surface);border-radius:var(--radius);
+       overflow:hidden;border:1px solid var(--line);font-size:13.5px}
+  .tbl th{background:#f0f3f6;text-align:left;padding:9px 12px;font-weight:700;font-size:12.5px;color:var(--ink-2)}
+  .tbl td{padding:9px 12px;border-top:1px solid var(--line)}
+  .num{text-align:right;font-family:var(--mono)}
+  .pill-ok{color:var(--brand-2);font-weight:700}
+
+  /* ── 铁律 ── */
+  .iron{background:linear-gradient(160deg,#2b1a10,#4a2c14);color:#f5e9dc;border-radius:var(--radius);padding:22px 24px}
+  .iron h3{color:#ffd9a8;margin-top:0}
+  .iron ol{margin:10px 0 0 20px}
+  .iron li{font-size:13.5px;padding:3px 0}
+  .iron b{color:#ffd9a8}
+
+  /* ── 复现 ── */
+  .cmd{margin:10px 0}
+
+  /* ── 页脚 ── */
+  footer{margin-top:56px;border-top:1px solid var(--line);background:var(--surface)}
+  .foot{max-width:1120px;margin:0 auto;padding:26px 20px;font-size:12.5px;color:var(--ink-3);
+        display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between}
+  .empty{color:var(--ink-3);font-size:13.5px;padding:18px;text-align:center;display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="topbar">
+    <div class="logo"><span class="mark">Dr</span>病历智能体 · LangGraph 实战课程</div>
+    <nav class="topnav">
+      <a href="#roadmap">课程路线</a>
+      <a href="#arch">架构</a>
+      <a href="#principles">设计原则</a>
+      <a href="#lessons">全部课程</a>
+      <a href="#metrics">评估</a>
+      <a href="#repro">复现</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <span class="kicker">DrCopilot 学习项目 · 官方课程站点 v1.0</span>
+    <h1>从零搭建病历文书生成流水线<br>—— LangChain / LangGraph 实战 22 课</h1>
+    <p class="sub">以县级医院真实场景为背景，在<b>全量脱敏</b>的患者数据上，从 LangGraph 三件套一路搭建到
+       多工位并行、人工审核、防编造核对与自动评估的完整流水线。每一课都产出可运行、有测试的代码。</p>
+    <div class="stats">
+      <div class="stat"><b>22</b><span>节课 · 地基/正篇/进阶/结业/毕业</span></div>
+      <div class="stat"><b>61</b><span>项自动化测试 · 全部通过</span></div>
+      <div class="stat"><b>9 / 9</b><span>tech-spec 站点已实现</span></div>
+      <div class="stat"><b>0</b><span>条编造内容进入草稿</span></div>
+      <div class="stat"><b>5</b><span>位脱敏测试患者 · 全量验收</span></div>
+    </div>
+    <div class="meta">本站所有患者标识均已脱敏（测试患者甲～戊 / FAKE0001~0005），日期整体平移至虚构时间线，不含任何真实身份信息。临床数据仅用于教学演示。</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ═════════ 课程路线 ═════════ -->
+<section id="roadmap">
+  <h2><span class="no">01</span>课程路线</h2>
+  <p class="sec-sub">四个阶段，每个阶段都以前一阶段的产物为地基。所有课程按依赖顺序排列，不可跳过地基直接学进阶。</p>
+  <div class="grid">
+    <div class="pcard"><h4><span class="ico">基</span>地基 · 第 0 课</h4>
+      <p><b>数据脱敏。</b>两遍扫描 + 模式兜底 + 反向校验三道工序，把 5 名真实患者变成「测试患者甲～戊」；
+      日期按天平移到 2099 年，年龄与全部时间间隔原样保留。后续一切课程的地基。</p></div>
+    <div class="pcard"><h4><span class="ico">正</span>正篇 · 第 1~8 课</h4>
+      <p><b>LangGraph 三件套</b>（State/Node/Edge）→ 条件循环 → LangChain 结构化输出 → 逐字核对 →
+      Send 并行 → 人工审核中断 → 合成总图与评估三指标 → 五患者全量毕业运行。</p></div>
+    <div class="pcard"><h4><span class="ico">进</span>进阶 · 第 9~14 课</h4>
+      <p><b>工程化</b>：子图与模块化重构（回归验证）、SqliteSaver 跨进程审核、测试消防演习（说谎模型注入）、
+      模型工厂与批准闸门、多栏目生产线、批量验收与治理规则。</p></div>
+    <div class="pcard"><h4><span class="ico">毕</span>结业与毕业 · 第 15~21 课</h4>
+      <p><b>对接真实项目</b>：移植对照分析、出口闸门、检验所见工位（毕业设计参考答案）、成文节点（书记员）、
+      计算器节点、分批成文、排版输出——tech-spec 九站点全部落地。</p></div>
+  </div>
+</section>
+
+<!-- ═════════ 架构 ═════════ -->
+<section id="arch">
+  <h2><span class="no">02</span>流水线架构（九站点）</h2>
+  <p class="sec-sub">对应真实项目 tech-spec 的九个站点，全部有代码实现与测试。粗体为分支/并行结构。</p>
+  <div class="flow">
+    <div class="stn"><div class="nm">normalize</div><div class="ds">读表·联表<br>每条带出处</div></div>
+    <div class="arrow">→</div>
+    <div class="stn"><div class="nm">privacy_gate</div><div class="ds">两道闸<br>命中即停</div></div>
+    <div class="arrow">→</div>
+    <div class="stn"><div class="nm">compute</div><div class="ds">住院天数<br>最高体温</div></div>
+    <div class="arrow">→</div>
+    <div class="stn"><div class="nm">extract<span class="badge">×N 并行</span></div><div class="ds">3 种工位<br>模型+代码</div></div>
+    <div class="arrow">→</div>
+    <div class="stn"><div class="nm">verify</div><div class="ds">逐字核对<br>不合格剔除</div></div>
+    <div class="arrow">→</div>
+    <div class="stn"><div class="nm">write<span class="badge">×栏目</span></div><div class="ds">书记员<br>只写事实</div></div>
+    <div class="arrow">→</div>
+    <div class="stn"><div class="nm">qc</div><div class="ds">编号质检<br>带意见重写≤2</div></div>
+    <div class="arrow">→</div>
+    <div class="stn"><div class="nm">review</div><div class="ds">医生审核<br>interrupt 暂停</div></div>
+    <div class="arrow">→</div>
+    <div class="stn"><div class="nm">render</div><div class="ds">打印稿<br>XML+评估</div></div>
+  </div>
+  <p class="flow-note">分支结构：命中闸门 → <code>gate_blocked</code> 终点（模型零调用）；成文质检不合格 → 携带质检意见退回
+     <code>write_plan</code>（最多 2 次，保险丝自装）；审核驳回 → 归档稿（绝不冒充正式）。持久化：SqliteSaver 跨进程「医生第二天批」。</p>
+</section>
+
+<!-- ═════════ 设计原则 ═════════ -->
+<section id="principles">
+  <h2><span class="no">03</span>贯穿全程的设计原则</h2>
+  <p class="sec-sub">这些不是口号——每一条都有对应的代码实现和测试断言锁死。</p>
+  <div class="grid">
+    <div class="pcard"><h4><span class="ico">源</span>每句话都有出处</h4>
+      <p>事实携带「表名+行号+编号」，成句携带事实编号，打印稿翻译回真实出处。测试断言：无出处句子必被质检拦截。</p></div>
+    <div class="pcard"><h4><span class="ico">核</span>先抽取、后成文，中间代码核对</h4>
+      <p>模型只负责理解和组织语言；出处存在、药名在原文、剂量数值等价——三步逐字核对由代码完成，对不上剔除并留痕。</p></div>
+    <div class="pcard"><h4><span class="ico">算</span>算术交给代码</h4>
+      <p>住院天数、最高体温、发热统计由「计算器节点」算出，口径即常量（37.3℃ 阈值只改一处），计算事实带依据与出处。</p></div>
+    <div class="pcard"><h4><span class="ico">拒</span>fail-closed</h4>
+      <p>核对未实现时全部剔除；没验证过的内容不能出口。宁可草稿为空，不可让未核对的话混进病历。</p></div>
+    <div class="pcard"><h4><span class="ico">检</span>测试锁不变式</h4>
+      <p>消防演习：注入「说谎的抽取模型」和「说谎的书记员」，断言闸门拦截、草稿不收、评估如实记账。锁的是不变式，不是某次输出。</p></div>
+    <div class="pcard"><h4><span class="ico">批</span>批准是显式动作</h4>
+      <p>数据外发批准 = 环境变量 <code>DRCOPILOT_DATA_APPROVED=1</code>，不是聊天里说一句可以。自动化评估 ≠ 自动化批准：批量稿一律驳回归档。</p></div>
+    <div class="pcard"><h4><span class="ico">座</span>模型是可换插座</h4>
+      <p>规则基线 ↔ 真模型（OpenAI 兼容）经工厂切换，流程代码零改动；切换由批准闸门把关。换厂商只改配置。</p></div>
+    <div class="pcard"><h4><span class="ico">回</span>回归验证与保回归</h4>
+      <p>重构只许动结构不许动行为——旧输出是行为规格（第 9 课数字一字不差）；「防雪崩上限」这类保险也要在评估里验证没杀召回（第 8 课）。</p></div>
+  </div>
+</section>
+
+<!-- ═════════ 数据安全铁律 ═════════ -->
+<section id="iron">
+  <div class="iron">
+    <h3>🔴 数据安全铁律（任何时候不能违反）</h3>
+    <ol>
+      <li><b>真实数据永不入库、不上传</b>：git 仓库只放代码与文档，`.gitignore` 拦截数据格式；推送前执行姓名/住院号反向扫描（本站发布时实测命中 0）。</li>
+      <li><b>开发教学一律用脱敏/虚构数据</b>：真实姓名 → 测试患者甲～戊；真名映射表仅存本地受控位置。</li>
+      <li><b>云端追踪强制关闭</b>：LangSmith 等 4 个追踪环境变量在代码最前面写死为 false。</li>
+      <li><b>API key 只从环境变量读取</b>：绝不写进代码；数据外发需显式批准环境变量。</li>
+      <li><b>出口闸门</b>：每次调用模型前扫描手机号/证件号/长编号/禁用姓名，命中即停、模型零调用，报警单自身打码。</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ═════════ 全部课程 ═════════ -->
+<section id="lessons">
+  <h2><span class="no">04</span>全部课程（22 节）</h2>
+  <p class="sec-sub">点击任意课程展开：学习目标 · 概念要点 · 踩过的坑 · 产出与代码位置。支持关键词搜索与阶段筛选。</p>
+  <div class="filters">
+    <input id="search" type="search" placeholder="搜索：reducer、闸门、覆盖率…" aria-label="搜索课程">
+    <button class="on" data-f="全部">全部</button>
+    <button data-f="地基">地基</button>
+    <button data-f="正篇">正篇</button>
+    <button data-f="进阶">进阶</button>
+    <button data-f="结业">结业</button>
+    <button data-f="毕业">毕业</button>
+  </div>
+  <div id="lesson-list"></div>
+  <div id="no-result" class="empty">没有匹配的课程——换个关键词试试。</div>
+</section>
+
+<!-- ═════════ 评估 ═════════ -->
+<section id="metrics">
+  <h2><span class="no">05</span>评估与验收（5 位测试患者全量）</h2>
+  <p class="sec-sub">来源：批量验收报告（规则基线）。汇报规则：<b>覆盖率必须连同「未覆盖原因」一起说</b>——数字是引子，解读才是交付。</p>
+  <div class="table-responsive">
+  <table class="tbl">
+    <thead><tr>
+      <th>患者</th><th class="num">医嘱</th><th class="num">检查行</th><th class="num">检验行</th><th class="num">工位</th>
+      <th class="num">用药草稿</th><th class="num">标准答案(种)</th><th class="num">覆盖率</th>
+      <th class="num">多报</th><th class="num">编造</th><th class="num">检查自覆盖</th><th class="num">检验自覆盖</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>测试患者甲</td><td class="num">200</td><td class="num">25</td><td class="num">389</td><td class="num">32</td><td class="num">37</td><td class="num">5</td><td class="num pill-ok">80%</td><td class="num">30</td><td class="num pill-ok">0</td><td class="num pill-ok">100%</td><td class="num pill-ok">100%</td></tr>
+      <tr><td>测试患者乙</td><td class="num">38</td><td class="num">3</td><td class="num">97</td><td class="num">8</td><td class="num">6</td><td class="num">3</td><td class="num">33%</td><td class="num">5</td><td class="num pill-ok">0</td><td class="num pill-ok">100%</td><td class="num pill-ok">100%</td></tr>
+      <tr><td>测试患者丙</td><td class="num">718</td><td class="num">68</td><td class="num">1307</td><td class="num">106</td><td class="num">227</td><td class="num">5</td><td class="num">60%</td><td class="num">209</td><td class="num pill-ok">0</td><td class="num pill-ok">100%</td><td class="num pill-ok">100%</td></tr>
+      <tr><td>测试患者丁</td><td class="num">368</td><td class="num">56</td><td class="num">777</td><td class="num">61</td><td class="num">89</td><td class="num">3</td><td class="num">33%</td><td class="num">87</td><td class="num pill-ok">0</td><td class="num pill-ok">100%</td><td class="num pill-ok">100%</td></tr>
+      <tr><td>测试患者戊</td><td class="num">85</td><td class="num">5</td><td class="num">165</td><td class="num">15</td><td class="num">16</td><td class="num">4</td><td class="num">50%</td><td class="num">12</td><td class="num pill-ok">0</td><td class="num pill-ok">100%</td><td class="num pill-ok">100%</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="grid" style="margin-top:16px">
+    <div class="pcard"><h4><span class="ico">解</span>覆盖率 33%~80% 怎么解读</h4>
+      <p>缺口集中在<b>吸入用七氟烷（5/5）与罗哌卡因（4/5）</b>——麻醉用药由麻醉医生术中给药，不走普通医嘱表。
+      这是<b>数据源缺口</b>，不是模型问题；对策是接入手术/麻醉记录数据源。</p></div>
+    <div class="pcard"><h4><span class="ico">解</span>多报 343 条怎么解读</h4>
+      <p>草稿有、标准答案没有——常见原因是普通溶媒（氯化钠/葡萄糖）本就不单独写用药记录。
+      多报交医生判断，<b>不自动定罪</b>；这是「标准答案只覆盖特殊用药」的体现。</p></div>
+    <div class="pcard"><h4><span class="ico">解</span>编造 0 条意味着什么</h4>
+      <p>不是运气：出处不存在、药名不在原文、结果值被篡改——任一不过即被剔除，有测试作证。
+      这是架构的<b>可证明安全性质</b>，对医疗系统是底线要求。</p></div>
+  </div>
+</section>
+
+<!-- ═════════ 复现 ═════════ -->
+<section id="repro">
+  <h2><span class="no">06</span>环境与复现</h2>
+  <p class="sec-sub">全部命令在本机实测通过。Python 3.9.6 · langgraph 0.6.11 · langchain-core 0.3.86 · pytest 8.4.2（真实仓库为 3.11 / 1.2.12，移植时重跑测试确认）。</p>
+  <pre class="cmd"><code># 运行完整流水线（指定患者 + 审核结论）
+cd src
+python3 -m medrecord.run 测试患者甲 批准
+
+# 两进程「医生第二天批」
+python3 -m medrecord.submit 测试患者乙      # 护士站：提交并挂起
+python3 -m medrecord.review 测试患者乙 批准  # 医生站：读存档、表态、走完
+
+# 批量验收（5 位患者，评估稿一律归档）
+python3 -m medrecord.batch
+
+# 全部测试（61 项）
+python3 -m pytest -q        # 项目根目录或 src/ 下均可</code></pre>
+  <h3>接真模型（需要你的 key + 明确批准）</h3>
+  <pre class="cmd"><code>export DRCOPILOT_API_KEY="sk-..."                    # 只放环境变量
+export DRCOPILOT_MODEL="glm-4-flash"                 # 或 deepseek-chat 等
+export DRCOPILOT_LLM_BASE_URL="https://..."          # 厂商 OpenAI 兼容端点
+export DRCOPILOT_DATA_APPROVED="1"                   # ← 这一下就是数据外发的显式批准</code></pre>
+</section>
+
+</div><!-- /wrap -->
+
+<footer>
+  <div class="foot">
+    <div>DrCopilot 病历智能体 · LangGraph 实战课程站点 · v1.0 · 2026-10 · 陈俊烨</div>
+    <div>数据已脱敏 · 无真实患者信息 · 仅供学习与内部交流 · <a href="https://github.com/1739467001-svg/LangGraph-Training" rel="noopener">GitHub 仓库</a></div>
+  </div>
+</footer>
+
+<script>
+const LESSONS = [
+ {no:0,phase:"地基",title:"数据脱敏——动手前的地基",
+  goal:"把 5 名真实患者的数据变成可安全教学的「测试患者甲～戊」，不碰坏任何临床价值。",
+  points:["两遍扫描：先收集建映射，再统一改写——信息分散在医嘱/检查主表/XML 正文，边读边改必返工",
+          "日期按天整体平移到 2099 年：年龄与「入院到用药间隔」全部保留；锚点用中位数防出生日期污染",
+          "双层防线：字段映射管明处，正则模式兜底暗处（手机号/身份证/「省市区路号」地址/「联系人：」标签）",
+          "校验与替换必须同语义；完整性核对（行列数/文书数不变）与反向搜索（0 残留）双验收"],
+  pits:["日期锚点取了最早日期→被 1956 年出生日期带偏，住院日期跑到 2168 年",
+        "数字型单元格绕过文本替换；校验标签同名互相覆盖漏检"],
+  code:"deid_tools/deidentify.py · gen_structure_report.py",
+  res:"5 患者 · 187 份文书 · 真实值 0 残留"},
+ {no:1,phase:"正篇",title:"三件套：State / Node / Edge",
+  goal:"最小可运行图：读医嘱 → 编号时间线 → 输出。",
+  points:["State=资料袋（TypedDict）；Node=科室（只返回要更新的字段）；Edge=箭头",
+          "节点之间不直接调用，全靠袋子传话——LangGraph 把返回值合并回状态",
+          "防编造第一步：每条时间线天生带出处（表名+行号+医嘱号）",
+          "Excel 空单元格是 None，与 datetime 比较会崩：o[\"start\"] or datetime.max"],
+  pits:["文件夹名（测试患者甲）≠住院号（FAKE0001）：让节点从表里读 ID 写回袋子"],
+  code:"src/lesson01_timeline.py",res:"200 条医嘱时间线"},
+ {no:2,phase:"正篇",title:"条件边与循环：质控退回重写",
+  goal:"质控不通过退回重写，最多 2 次；到顶带病出报告。",
+  points:["add_conditional_edges：路由函数读状态、返回下一站名字",
+          "回头路：fix_issues → qc_check，重写完必须再送质控裁决",
+          "保险丝自己装：MAX_REWRITE=2，LangGraph 全局递归上限（默认 25）只是坠机保险",
+          "fail-closed：质控的目标不是消灭问题，而是把问题变成明确的清单"],
+  pits:["fix_issues 忘记消掉 \"?\" 会无限循环；节点不许原地突变上游数据（复制→改→返回新的）"],
+  code:"src/lesson02_qc_loop.py",res:"163 条非用药医嘱被拦下并标记"},
+ {no:3,phase:"正篇",title:"LangChain：模板·模型·结构化输出",
+  goal:"「资料员」上岗：提示词模板 + 大模型调用 + pydantic 交货合同。",
+  points:["ChatPromptTemplate 填空题：规则写一遍，变量运行时填",
+          "结构化输出=交货合同：字段与规矩（逐字照抄/没依据填待医生补充），回包当场验货",
+          "LCEL：prompt | model | parser，一竿子到底",
+          "替身模型继承 BaseChatModel，接口与真模型一致——换零件不改图"],
+  pits:["给模型看的医嘱限量（SHOW_LIMIT）本身就是工程决策：token 与上下文"],
+  code:"src/lesson03_llm_extract.py",res:"3 条用药事实通过合同校验（含故意埋的错弹）"},
+ {no:4,phase:"正篇",title:"核对节点：逐字核对模型输出",
+  goal:"防编造核心：模型的话一律先当嫌疑人。",
+  points:["三步核对：出处存在 → 药名逐字在原文 → 剂量数值等价（100 == 100.0，归一化）",
+          "fail-closed：核对没实现时全部剔除；剔除留痕=审计轨迹=评估指标原料",
+          "方向性：模型填「待医生补充」=诚实放行；表里没有模型却说有=编造，剔除"],
+  pits:["「一致」要提前定义——逐字核对 ≠ 字符串全等"],
+  code:"src/lesson04_verify.py",res:"3 条错弹全军覆没（9999 行不存在×1、药名出处不符×2）"},
+ {no:5,phase:"正篇",title:"并行分发（Send）与 reducer",
+  goal:"200 条医嘱切 10 批并行抽取。",
+  points:["Send(节点名,子状态)：返回几个就并行开几个工位；喂料与交货是两回事",
+          "并行写同一 key 必须 reducer：Annotated[list, operator.add] 追加",
+          "亲眼撞一次 InvalidUpdateError：单写者不需要 reducer，并行才是它存在的理由"],
+  pits:["工位交货乱序到达是并行本义；需要顺序在 merge 节点排序"],
+  code:"src/lesson05_send.py",res:"10 工位 30 条事实并行合并"},
+ {no:6,phase:"正篇",title:"人工审核：interrupt / Command",
+  goal:"流程走到「医生审核」暂停，等人表态后从暂停点继续。",
+  points:["interrupt(payload) 暂停并递材料；Command(resume=值) 恢复，interrupt() 返回它",
+          "检查点=游戏存档；恢复不是重放——load/extract 不再执行",
+          "驳回≠报错：归档稿明确标注不得冒充正式病历"],
+  pits:["result.facts 是 pydantic 对象列表，按字典下标取值要先 model_dump()"],
+  code:"src/lesson06_review.py",res:"批准/驳回两条路径输出完全不同"},
+ {no:7,phase:"正篇",title:"合成总图 + 评估三指标",
+  goal:"全部积木拼成一张图：并行→核对→审核→XML 回填→对照评估。",
+  points:["评估三指标：覆盖率 / 多报（交医生判断）/ 编造数（核对剔除）",
+          "覆盖率的数字必须配解读——甲患者 80%，缺口在麻醉数据源",
+          "文件夹名≠住院号：一个字段承担两个身份迟早出 bug，state 里分开存"],
+  pits:["QC 拦下 163 条是占位路由的锅——报告要诚实列出遗留问题"],
+  code:"src/lesson07_full_pipeline.py",res:"37 条草稿 / 覆盖 4/5=80% / 编造 0"},
+ {no:8,phase:"正篇",title:"毕业运行：五患者全量评估",
+  goal:"38~718 条医嘱全量跑通，产出第一份验收报告。",
+  points:["规模验证：2~36 个工位自适应，代码零改动",
+          "评估→追查→修复→复测：丁 0% 是「每工位 8 条」防雪崩上限静默截断杀召回",
+          "系统性发现：七氟烷/罗哌卡因 5/5、4/5 未覆盖=麻醉数据源缺口，不是模型问题"],
+  pits:["保险措施也会杀召回——任何「防出事的上限」都要在评估里验证"],
+  code:"src/lesson07_full_pipeline.py + outputs/批量验收报告.md",res:"覆盖率 33%~80% · 编造全 0"},
+ {no:9,phase:"进阶",title:"工程化重构：子图与模块化",
+  goal:"从教学脚本到 medrecord 包：state/models/extraction/pipeline_nodes/graph/run。",
+  points:["子图=专科小组：函数装不下图语义（Send/循环），子图可以；在父图当一个节点挂",
+          "回归验证：重构只许动结构不许动行为，旧输出是行为规格",
+          "stream_mode=\"updates\"：每个节拍可见；父图看子图是黑盒"],
+  pits:["抽取科内部 10 工位并行，父图只看到 extraction 一个节点完成——抽象边界的价值"],
+  code:"src/medrecord/*（6 模块）",res:"重构后数字与第 7 课一字不差"},
+ {no:10,phase:"进阶",title:"持久化检查点：医生第二天批",
+  goal:"InMemorySaver→SqliteSaver，跨进程恢复成真。",
+  points:["thread_id=存档位编号；提交方与审核方报同一个号",
+          "get_state()：snap.next 是挂起下一站，interrupts[0].value 是递给医生的材料",
+          "恢复不重放：从存档读袋子、从暂停节点继续"],
+  pits:["存档器是注入零件：build_main_graph(checkpointer=...)，内存/SQLite/Postgres 随换"],
+  code:"src/medrecord/submit.py · review.py",res:"两进程接力：提交→退出→新进程读档→批准→走完"},
+ {no:11,phase:"进阶",title:"测试：消防演习",
+  goal:"把「模型说谎，系统不漏」从口号变成 0.5 秒可重复的断言。",
+  points:["三层：零件上岗考核（纯函数）/ 整机冒烟 / 故意放火（说谎模型注入）",
+          "测试锁不变式：编造必被拦、每条带出处——无论提示词怎么改",
+          "monkeypatch 换链能生效：模块全局变量运行时解析 + 模型层本就可替换"],
+  pits:["测试名用中文说清考什么——测试是给人看的规格"],
+  code:"src/medrecord/tests/*",res:"16 项测试（后随课程扩展至 61 项）"},
+ {no:12,phase:"进阶",title:"模型工厂与批准闸门",
+  goal:"无 key→基线；有 key 未批准→仍基线；批准→真模型。",
+  points:["铁律 6 的物理实现：批准=DRCOPILOT_DATA_APPROVED=1 环境变量，代码不认识聊天记录",
+          "temperature=0：抽取要可复现，不要创造性",
+          "真模型必踩的坑：markdown 代码围栏——parse_facts 先剥再验货；替身测不出真模型的坑"],
+  pits:["懒加载：langchain_openai 只在真模型分支 import，基线模式零依赖"],
+  code:"src/medrecord/models.py",res:"工厂 4 分支测试全绿（全程不联网）"},
+ {no:13,phase:"进阶",title:"多栏目生产线：三种工位",
+  goal:"栏目=配置：用药→模型工位，检查所见→代码工位；Send 混合派发。",
+  points:["架构判断：不是所有栏目都要大模型——医生写好的结论逐字摘录即可，零幻觉零成本",
+          "跨表关联：检查结果表没有项目名，按 EXAM_NO 联检查申请项目表补上",
+          "核对分科：用药（出处/药名/剂量）与检查所见（出处/项目名/印象）各自分支"],
+  pits:["and drug_facts 返回列表不是布尔——重写逻辑的 bug 被测试当场抓住",
+        "旧夹具没有 section 字段：f.get(section, 默认) 兜底兼容"],
+  code:"src/medrecord/extraction.py",res:"12 工位并行；检查所见自覆盖 100%"},
+ {no:14,phase:"进阶",title:"批量验收与治理规则",
+  goal:"编译一次图跑多个 thread；批量稿一律驳回归档。",
+  points:["治理规则 1：编译一次图，thread_id 隔离多患者状态（多租户雏形）",
+          "治理规则 2：自动化评估≠自动化批准——批量稿 status=未过审，写进测试断言",
+          "汇总报告自动生成解读：跨患者未覆盖药物统计把「数据源缺口」变成数字"],
+  pits:["校验标签唯一性；治理规则必须被断言锁住而非写在注释里"],
+  code:"src/medrecord/batch.py",res:"5 患者 · 覆盖率 33~80% · 编造 0"},
+ {no:15,phase:"结业",title:"移植对齐：课程骨架 × 真实仓库",
+  goal:"逐站对照 donge-hospital-ai 的 tech-spec，产出移植对照文档。",
+  points:["两大缺口当时确认：出口闸门（后于第 16 课补上）与成文节点（后于第 18 课补上）",
+          "反哺清单：SqliteSaver 跨进程审核、治理规则、5 个 OPEN-QUESTIONS 的参考答案",
+          "环境差异：本机 3.9/0.6.11 vs 真实仓库 3.11/1.2.12——同名接口两边都实测过"],
+  pits:["移植前必查：在真实环境重跑测试确认跨版本行为一致"],
+  code:"docs/移植对照.md",res:"逐站对照表 + 7 步移植顺序"},
+ {no:16,phase:"结业",title:"出口闸门：两道安检",
+  goal:"发出去之前先安检——tech-spec 原则 6 落地。",
+  points:["两道闸：流程开头一次（命中→拦截终点，模型零调用）+ 每次调模型前一次（防御纵深）",
+          "报警单自身打码：测试断言「13800001234 not in preview」",
+          "禁用词表从脱敏映射表自动装载（本地受控）；文件被删闸门照常工作（模式兜底）"],
+  pits:["长编号与手机号/身份证区间去重，避免三连报警"],
+  code:"src/medrecord/privacy_gate.py",res:"拦截时模型零调用有计数探针测试作证"},
+ {no:17,phase:"毕业",title:"毕业设计：检验所见工位",
+  goal:"独立完成的期末考试（按指令完成参考答案）——第三种代码工位。",
+  points:["数据侦察：检验结果表自带 REPORT_ITEM_NAME 与 RESULT，省一次联表",
+          "先写测试（红灯）→ 再写实现（绿灯）：含「结果值被篡改拦截」（10.8→110.8）",
+          "全链路接入：state/草稿/XML/评估/闸门/批量报告新增检验列"],
+  pits:["批量报告「工位」列漏算检验工位（12 应为 32）——别相信第一次跑出来的统计"],
+  code:"tests/test_lab_section.py · extraction.py",res:"389 条摘录自覆盖 100% · 用药 80% 零回归"},
+ {no:18,phase:"毕业",title:"成文节点：先抽取、后成文",
+  goal:"书记员科室：只用核对过的事实写病历语言，每句带事实编号。",
+  points:["事实编号 F1..Fn：引用不存在的编号=编造的铁证，质检当场拦截",
+          "质检回路 2.0：退回重写时把质检意见注入提示词——模型带着批注改稿",
+          "保险丝：重写最多 2 次，到顶带病进审核并如实标注",
+          "「待医生补充」由代码加——不交给模型决定"],
+  pits:["说谎书记员演习：每轮编造→每轮拦截→3 轮后带病进审核（不静默放行不死循环）"],
+  code:"src/medrecord/writer.py · tests/test_write_section.py",res:"451 句成文，质检一轮全过"},
+ {no:19,phase:"毕业",title:"计算器节点：算术交给代码",
+  goal:"住院天数/最高体温/发热统计全部代码计算，模型一个数都不许算。",
+  points:["计算事实=第三类事实：每条带依据（怎么算）与出处（哪一行）",
+          "纯函数+节点分离：compute_stays/max_temp/fever 可单独单测",
+          "口径即常量：住院天数口径、发热阈值 37.3℃ 显式定义，医院口径不同改一处"],
+  pits:["数据侦察三连：值在 CVALUES 列（VALUES 列全空）、体温叫「腋下体温」、入院/出院是事件行"],
+  code:"src/medrecord/compute.py · tests/test_compute.py",res:"甲患者 5 条计算事实全部正确（7/4/3 天、36.9℃）"},
+ {no:20,phase:"毕业",title:"分批成文：token 工程与自定义归并",
+  goal:"书记员按栏目分批并行：token 预算=栏目内事实量。",
+  points:["自定义归并规则 written_reducer：__RESET__ 擦黑板/其余追加——重写不累积重复",
+          "并行汇合（join）：多栏目工位同时指向 qc_write，全部到齐只跑一次",
+          "条件边返回混合类型：有栏目返回 Send 列表，没栏目直通质检节点"],
+  pits:["说谎书记员演习验收「3 轮后 3 句不是 9 句」——RESET 规则错一句就露馅"],
+  code:"writer.py · state.py(written_reducer)",res:"3 工位并行成文 451 句，质检一轮全过"},
+ {no:21,phase:"毕业",title:"排版输出（render）：九站点收官",
+  goal:"把成文句排成医生能打印的 Markdown 稿——tech-spec 最后一站。",
+  points:["内部编号不外露：sources_to_text() 把 F1 翻译成真实出处",
+          "状态即内容：过审稿「已通过医生审核」；驳回稿自动带警示语——排版层也执行防编造",
+          "质控记录随附：重写次数/遗留问题/剔除清单都进打印稿"],
+  pits:["给医生看的必须是能回查的东西——内部编号对医生毫无意义"],
+  code:"pipeline_nodes.py(render_node) · tests/test_render.py",res:"61 项测试全绿 · 九站点全部落地"},
+];
+
+const listEl = document.getElementById("lesson-list");
+const noRes = document.getElementById("no-result");
+const TAGCLS = {"地基":"地基","正篇":"正篇","进阶":"进阶","结业":"结业","毕业":"毕业"};
+
+function render(filter, kw){
+  listEl.innerHTML = "";
+  let shown = 0;
+  const kwl = (kw||"").trim().toLowerCase();
+  LESSONS.forEach(L => {
+    if (filter !== "全部" && L.phase !== filter) return;
+    const hay = (L.title + L.goal + L.points.join("") + (L.pits||[]).join("")).toLowerCase();
+    if (kwl && !hay.includes(kwl)) return;
+    shown++;
+    const det = document.createElement("details");
+    det.className = "lesson";
+    const pits = (L.pits||[]).map(p=>`<li class="warn">${p}</li>`).join("");
+    det.innerHTML = `
+      <summary>
+        <span class="lno">第${String(L.no).padStart(2,"0")}课</span>
+        <span class="ltt">${L.title}</span>
+        <span class="ltag ${TAGCLS[L.phase]}">${L.phase}</span>
+      </summary>
+      <div class="lbody">
+        <div class="lgoal"><b>学习目标：</b>${L.goal}</div>
+        <div class="cols">
+          <div class="lsec"><h5>概念要点</h5><ul>${L.points.map(p=>`<li>${p}</li>`).join("")}</ul></div>
+          <div class="lsec"><h5>踩过的坑</h5><ul>${pits || '<li class="warn">本课无记录在案的坑（少见）</li>'}</ul>
+            <h5 style="margin-top:10px">产出与代码</h5>
+            <ul><li><code>${L.code}</code></li><li>${L.res}</li></ul></div>
+        </div>
+      </div>`;
+    listEl.appendChild(det);
+  });
+  noRes.style.display = shown ? "none" : "block";
+}
+let curFilter = "全部", curKw = "";
+render(curFilter, curKw);
+document.querySelectorAll(".filters button").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    document.querySelectorAll(".filters button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    curFilter = b.dataset.f;
+    render(curFilter, curKw);
+  });
+});
+document.getElementById("search").addEventListener("input", e=>{
+  curKw = e.target.value;
+  render(curFilter, curKw);
+});
+</script>
+</body>
+</html>
